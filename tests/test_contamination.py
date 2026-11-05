@@ -7,8 +7,10 @@ from pathlib import Path
 import duckdb
 
 from src.datagen.dedupe import ContaminationFilter
+from src.datagen.generator import format_batch_teacher_prompt, parse_batched_sql_completions
 from src.datagen.verifier import SQLVerifier
 from src.eval.general_holdout import evaluate_general_holdout
+from src.eval.rag import SchemaDefinitionRetriever
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -112,3 +114,29 @@ def test_general_sql_holdout_execution():
     res = evaluate_general_holdout(oracle_preds, holdout_path=holdout_path)
     assert res["total_items"] == 200
     assert res["execution_accuracy"] == 1.0
+
+
+def test_batch_teacher_prompt_and_parser():
+    retriever = SchemaDefinitionRetriever()
+    questions = [
+        "Count active accounts",
+        "What is the CEO's credit score?",
+        "Sum active MRR",
+    ]
+    prompt = format_batch_teacher_prompt(questions, retriever)
+    assert "### Batched Questions (3 items):" in prompt
+    assert "1. Count active accounts" in prompt
+    assert "3. Sum active MRR" in prompt
+
+    raw_json = (
+        "```json\n"
+        '[{"index": 1, "sql": "SELECT COUNT(*) FROM accounts WHERE status = \'active\'"}, '
+        '{"index": 2, "sql": "REFUSAL: UNANSWERABLE_FROM_SCHEMA"}, '
+        '{"index": 3, "sql": "SELECT SUM(mrr_amount) FROM subscriptions WHERE status = \'active\'"}]\n'
+        "```"
+    )
+    parsed = parse_batched_sql_completions(raw_json, expected_count=3)
+    assert len(parsed) == 3
+    assert parsed[0] == "SELECT COUNT(*) FROM accounts WHERE status = 'active'"
+    assert parsed[1] == "REFUSAL: UNANSWERABLE_FROM_SCHEMA"
+    assert parsed[2] == "SELECT SUM(mrr_amount) FROM subscriptions WHERE status = 'active'"

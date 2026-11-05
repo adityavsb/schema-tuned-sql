@@ -153,15 +153,16 @@ class DataGenConfig(BaseModel):
     primary_teacher: str = "deepseek/deepseek-chat"
     secondary_teacher: str = "qwen/qwen-2.5-coder-32b-instruct"
     require_dual_agreement: bool = False
-    target_verified_pairs: int = Field(default=5000, gt=0)
-    scaling_splits: list[int] = Field(default_factory=lambda: [500, 1000, 2000, 5000])
+    target_verified_pairs: int = Field(default=2000, gt=0)
+    scaling_splits: list[int] = Field(default_factory=lambda: [250, 500, 1000, 2000])
+    questions_per_call: int = Field(default=8, ge=1, le=50)
     difficulty_weights: dict[str, float] = Field(
         default_factory=lambda: {"easy": 0.30, "medium": 0.40, "hard": 0.30}
     )
     negative_ratio: float = Field(default=0.08, ge=0.0, le=0.5)
     max_usd: float = Field(default=15.0, gt=0.0)
     temperature: float = Field(default=0.2, ge=0.0, le=2.0)
-    max_tokens: int = Field(default=600, gt=0)
+    max_tokens: int = Field(default=1800, gt=0)
     execution_timeout_sec: float = Field(default=5.0, gt=0.0)
     contamination_sim_threshold: float = Field(default=0.85, gt=0.0, le=1.0)
     seed: int = 42
@@ -225,10 +226,10 @@ class SFTConfig(BaseModel):
     loss_on: Literal["completion_only", "full_sequence"] = "completion_only"
     include_schema_in_prompt: bool = True
     use_execution_filtered_data: bool = True
-    train_subset_size: int = Field(default=5000, gt=0)
+    train_subset_size: int = Field(default=2000, gt=0)
     eval_every_steps: int = Field(default=100, gt=0)
     seeds: list[int] = Field(default_factory=lambda: [13, 42, 7])
-    train_data_path: str = "data/train/train_5000.jsonl"
+    train_data_path: str = "data/train/train_2000.jsonl"
     dev_data_path: str = "data/dev.jsonl"
     output_dir: str = ".artifacts/checkpoints"
     mlflow_tracking_uri: str = "sqlite:///mlflow.db"

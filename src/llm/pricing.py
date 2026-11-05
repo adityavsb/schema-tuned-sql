@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -67,6 +68,8 @@ def estimate_cost_usd(model_name: str, prompt_tokens: int, completion_tokens: in
 class BudgetTracker:
     """Persistent cumulative cost ledger enforcing a hard USD budget cap."""
 
+    _global_lock = threading.Lock()
+
     def __init__(
         self,
         max_usd: float = 15.0,
@@ -75,7 +78,8 @@ class BudgetTracker:
         self.max_usd = max_usd
         self.ledger_path = Path(ledger_path)
         self.ledger_path.parent.mkdir(parents=True, exist_ok=True)
-        self._ensure_ledger()
+        with self._global_lock:
+            self._ensure_ledger()
 
     def _ensure_ledger(self) -> None:
         if not self.ledger_path.is_file():
@@ -104,7 +108,8 @@ class BudgetTracker:
 
     @property
     def total_spent_usd(self) -> float:
-        return float(self._read_state().get("total_spent_usd", 0.0))
+        with self._global_lock:
+            return float(self._read_state().get("total_spent_usd", 0.0))
 
     def check_can_spend(self, projected_cost_usd: float = 0.0) -> None:
         """Raises BudgetExceededError if current + projected spend exceeds max_usd."""
@@ -119,13 +124,15 @@ class BudgetTracker:
         self, prompt_tokens: int, completion_tokens: int, cost_usd: float
     ) -> dict[str, Any]:
         """Records token usage and cost, enforcing the budget cap."""
-        state = self._read_state()
-        new_total = round(float(state.get("total_spent_usd", 0.0)) + cost_usd, 6)
-        state["total_spent_usd"] = new_total
-        state["total_prompt_tokens"] = int(state.get("total_prompt_tokens", 0)) + prompt_tokens
-        state["total_completion_tokens"] = (
-            int(state.get("total_completion_tokens", 0)) + completion_tokens
-        )
-        state["total_calls"] = int(state.get("total_calls", 0)) + 1
-        self._write_state(state)
+        with self._global_lock:
+            state = self._read_state()
+            new_total = round(float(state.get("total_spent_usd", 0.0)) + cost_usd, 6)
+            state["total_spent_usd"] = new_total
+            state["total_prompt_tokens"] = int(state.get("total_prompt_tokens", 0)) + prompt_tokens
+            state["total_completion_tokens"] = (
+                int(state.get("total_completion_tokens", 0)) + completion_tokens
+            )
+            state["total_calls"] = int(state.get("total_calls", 0)) + 1
+            self._write_state(state)
+            return state
         return state

@@ -2,9 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
+import ssl
 import time
+import urllib.error
+import urllib.request
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -14,6 +18,17 @@ from src.llm.pricing import BudgetTracker, estimate_cost_usd
 from src.utils.config import load_dotenv
 
 load_dotenv()
+
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+
+def mask_secret(secret: str | None) -> str:
+    """Returns a safely masked representation of an API secret."""
+    if not secret:
+        return "[NOT SET]"
+    if len(secret) <= 10:
+        return "***MASKED***"
+    return f"{secret[:8]}...{secret[-4:]}"
 
 
 def sanitize_error_detail(text: str, max_len: int = 200) -> str:
@@ -83,11 +98,8 @@ def call_llm(
             "Set it in your local .env (gitignored) or environment before running live API calls."
         )
 
-    import litellm
-
-    litellm.suppress_debug_info = True
-
     model_slug = model if model.startswith("openrouter/") else f"openrouter/{model}"
+    raw_model_id = model.replace("openrouter/", "")
     messages: list[dict[str, str]] = []
     if system_prompt:
         messages.append({"role": "system", "content": system_prompt})
@@ -99,20 +111,78 @@ def call_llm(
     }
 
     last_error: Exception | None = None
-    response: Any = None
+    content = ""
+    prompt_tokens = 0
+    completion_tokens = 0
+    succeeded = False
     t0 = time.perf_counter()
+
+    try:
+        import litellm  # type: ignore
+
+        litellm.suppress_debug_info = True
+        has_litellm = True
+    except ImportError:
+        has_litellm = False
 
     for attempt in range(max_retries):
         try:
-            response = litellm.completion(
-                model=model_slug,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens,
-                timeout=timeout,
-                api_key=api_key,
-                extra_headers=extra_headers,
-            )
+            if has_litellm:
+                response = litellm.completion(
+                    model=model_slug,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    timeout=timeout,
+                    api_key=api_key,
+                    extra_headers=extra_headers,
+                )
+                choice = response.choices[0]
+                content = getattr(choice.message, "content", "") or ""
+                usage = getattr(response, "usage", None)
+                prompt_tokens = int(
+                    getattr(usage, "prompt_tokens", 0) or len(full_prompt_key.split())
+                )
+                completion_tokens = int(
+                    getattr(usage, "completion_tokens", 0) or len(content.split())
+                )
+            else:
+                req_body = json.dumps(
+                    {
+                        "model": raw_model_id,
+                        "messages": messages,
+                        "temperature": temperature,
+                        "max_tokens": max_tokens,
+                    }
+                ).encode("utf-8")
+                req_headers = {
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json",
+                    **extra_headers,
+                }
+                req = urllib.request.Request(
+                    OPENROUTER_API_URL, data=req_body, headers=req_headers, method="POST"
+                )
+                try:
+                    import certifi
+
+                    ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+                except ImportError:
+                    ssl_ctx = ssl.create_default_context()
+                with urllib.request.urlopen(req, timeout=timeout, context=ssl_ctx) as resp:
+                    resp_json = json.loads(resp.read().decode("utf-8"))
+                choices = resp_json.get("choices") or []
+                if not choices:
+                    raise RuntimeError(f"Empty choices in OpenRouter response: {resp_json}")
+                content = (choices[0].get("message") or {}).get("content") or ""
+                usage_dict = resp_json.get("usage") or {}
+                prompt_tokens = int(
+                    usage_dict.get("prompt_tokens", 0) or len(full_prompt_key.split())
+                )
+                completion_tokens = int(
+                    usage_dict.get("completion_tokens", 0) or len(content.split())
+                )
+            succeeded = True
             break
         except Exception as e:
             last_error = e
@@ -129,18 +199,13 @@ def call_llm(
 
     latency_ms = round((time.perf_counter() - t0) * 1000.0, 2)
 
-    if response is None:
+    if not succeeded:
         err_cls = type(last_error).__name__ if last_error else "UnknownError"
         detail = sanitize_error_detail(str(last_error)) if last_error else ""
         raise RuntimeError(
             f"OpenRouter call failed for '{model_slug}' after {max_retries} attempts ({err_cls}): {detail}"
         ) from last_error
 
-    choice = response.choices[0]
-    content = getattr(choice.message, "content", "") or ""
-    usage = getattr(response, "usage", None)
-    prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or len(full_prompt_key.split()))
-    completion_tokens = int(getattr(usage, "completion_tokens", 0) or len(content.split()))
     total_tokens = prompt_tokens + completion_tokens
 
     cost_usd = estimate_cost_usd(model, prompt_tokens, completion_tokens)
