@@ -1,0 +1,36 @@
+run_name: "sft-qwen15b-lora"
+base_model: "Qwen/Qwen2.5-Coder-1.5B-Instruct"
+precision: "fp16"
+attn_implementation: "sdpa"
+quantization:
+  enabled: false
+  load_in_4bit: false
+  bnb_4bit_quant_type: "nf4"
+  bnb_4bit_use_double_quant: true
+  bnb_4bit_compute_dtype: "float16"
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+max_seq_len: 1536
+per_device_train_batch_size: 4
+gradient_accumulation_steps: 8
+gradient_checkpointing: true
+optimizer: "paged_adamw_8bit"
+learning_rate: 0.0002
+lr_scheduler: "cosine"
+warmup_ratio: 0.03
+max_grad_norm: 1.0
+epochs: 2
+loss_on: "completion_only"
+include_schema_in_prompt: true
+use_execution_filtered_data: true
+train_subset_size: 5000
+eval_every_steps: 100
+seeds: [13, 42, 7]
+train_data_path: "data/train/train_5000.jsonl"
+dev_data_path: "data/dev.jsonl"
+output_dir: ".artifacts/checkpoints/sft-qwen15b-lora"
+mlflow_tracking_uri: "sqlite:///mlflow.db"
+mlflow_experiment: "schema-tuned-sql-sft"

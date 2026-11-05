@@ -1,0 +1,66 @@
+run_name: "metricpulse-benchmark-v1"
+test_path: "data/test_gold.jsonl"
+dev_path: "data/dev.jsonl"
+general_holdout_path: "data/general_sql_holdout.jsonl"
+warehouse_seed: 42
+bootstrap_resamples: 2000
+confidence_level: 0.95
+float_tolerance: 0.0001
+max_usd: 15.0
+temperature: 0.0
+max_tokens: 512
+cache_dir: ".cache/llm_responses"
+budget_ledger_path: ".cache/budget_ledger.json"
+results_dir: "results"
+systems:
+  - id: "B0"
+    name: "Qwen2.5-Coder-3B Zero-Shot (Schema in Prompt)"
+    kind: "zero_shot"
+    model: "Qwen/Qwen2.5-Coder-3B-Instruct"
+  - id: "B1"
+    name: "Qwen2.5-Coder-3B Few-Shot (k=5)"
+    kind: "few_shot"
+    model: "Qwen/Qwen2.5-Coder-3B-Instruct"
+    few_shot_k: 5
+  - id: "B2"
+    name: "Qwen2.5-Coder-3B + Schema/Definition RAG"
+    kind: "schema_rag"
+    model: "Qwen/Qwen2.5-Coder-3B-Instruct"
+    rag_top_tables: 5
+    rag_top_defs: 2
+    rag_top_examples: 3
+  - id: "T1"
+    name: "DeepSeek Teacher API (OpenRouter)"
+    kind: "api_teacher"
+    model: "deepseek/deepseek-chat"
+  - id: "T2"
+    name: "Qwen-2.5-Coder-32B API (OpenRouter)"
+    kind: "api_teacher"
+    model: "qwen/qwen-2.5-coder-32b-instruct"
+  - id: "S1"
+    name: "LoRA SFT Qwen2.5-Coder-1.5B (FP16)"
+    kind: "sft_student"
+    model: "Qwen/Qwen2.5-Coder-1.5B-Instruct"
+    adapter_path: ".artifacts/checkpoints/sft-qwen15b-lora"
+  - id: "S2"
+    name: "QLoRA SFT Qwen2.5-Coder-3B (4-bit NF4)"
+    kind: "sft_student"
+    model: "Qwen/Qwen2.5-Coder-3B-Instruct"
+    adapter_path: ".artifacts/checkpoints/sft-qwen3b-qlora"
+  - id: "S3"
+    name: "QLoRA SFT Qwen2.5-Coder-7B (Stretch)"
+    kind: "sft_student"
+    model: "Qwen/Qwen2.5-Coder-7B-Instruct"
+    adapter_path: ".artifacts/checkpoints/sft-qwen7b-qlora"
+  - id: "S4"
+    name: "QLoRA SFT 3B + Schema RAG at Inference"
+    kind: "sft_rag"
+    model: "Qwen/Qwen2.5-Coder-3B-Instruct"
+    adapter_path: ".artifacts/checkpoints/sft-qwen3b-qlora"
+    rag_top_tables: 5
+    rag_top_defs: 2
+    rag_top_examples: 3
+mcnemar_pairs:
+  - ["S2", "T1"]
+  - ["S2", "B2"]
+  - ["S1", "S2"]

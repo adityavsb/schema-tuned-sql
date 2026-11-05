@@ -1,0 +1,70 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "schema-tuned-sql"
+version = "0.1.0"
+description = "Fine-tuning small open LLMs for analytics text-to-SQL on NVIDIA T4 GPUs with execution-verified distillation and DuckDB ground truth."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Aditya Bhadoria", email = "adityavsb@users.noreply.github.com" }
+]
+keywords = [
+    "text-to-sql",
+    "fine-tuning",
+    "lora",
+    "qlora",
+    "duckdb",
+    "qwen2.5-coder",
+    "evaluation",
+    "openrouter",
+]
+dependencies = [
+    "pydantic>=2.7.0",
+    "pyyaml>=6.0.1",
+    "duckdb>=1.0.0",
+    "sqlglot>=25.0.0",
+    "litellm>=1.40.0",
+    "numpy>=1.26.0",
+    "scipy>=1.11.0",
+    "rich>=13.7.0",
+    "faker>=25.0.0",
+]
+
+[project.optional-dependencies]
+gpu = [
+    "torch>=2.4.0",
+    "transformers>=4.44.0",
+    "peft>=0.12.0",
+    "trl>=0.9.6",
+    "datasets>=2.20.0",
+    "accelerate>=0.33.0",
+    "bitsandbytes>=0.43.0",
+]
+tracking = [
+    "mlflow>=2.15.0",
+]
+dev = [
+    "pytest>=8.2.0",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.6.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*", "warehouse*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

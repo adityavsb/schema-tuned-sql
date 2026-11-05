@@ -1,0 +1,42 @@
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+
+# Python cache & build
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+dist/
+build/
+*.egg-info/
+
+# Local databases, tracking, secrets
+warehouse/*.duckdb
+warehouse/*.duckdb.wal
+mlruns/
+mlartifacts/
+*.db
+.env
+.env.local
+.env.*
+!.env.example
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Cache & training traces
+.cache/
+.artifacts/
+reports/
+data/train/generated_*.jsonl
+data/train/train_*.jsonl
+data/train/unfiltered_*.jsonl
+!data/train/manifest.json

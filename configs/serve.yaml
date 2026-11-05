@@ -1,0 +1,12 @@
+run_name: "t4-serving-bench"
+base_model: "Qwen/Qwen2.5-Coder-3B-Instruct"
+adapter_path: ".artifacts/checkpoints/sft-qwen3b-qlora"
+backend: "vllm_fp16"
+batch_sizes: [1, 8, 32]
+num_queries: 64
+max_new_tokens: 256
+t4_hourly_usd: 0.35
+comparison_api_model: "deepseek/deepseek-chat"
+avg_prompt_tokens: 950
+avg_completion_tokens: 110
+results_path: "results/serving_cost_analysis.json"
