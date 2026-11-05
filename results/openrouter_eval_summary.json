@@ -1,0 +1,123 @@
+{
+  "run_name": "metricpulse-benchmark-v1",
+  "mode": "live",
+  "is_model_evidence": true,
+  "test_path": "/Users/diabolixw/Downloads/claude_code/schema-tuned-sql/data/test_gold.jsonl",
+  "systems": {
+    "T1": {
+      "system_id": "T1",
+      "system_name": "DeepSeek Teacher API (OpenRouter)",
+      "kind": "api_teacher",
+      "model": "deepseek/deepseek-chat",
+      "mode": "live",
+      "is_model_evidence": true,
+      "total_samples": 220,
+      "answerable_samples": 200,
+      "negative_samples": 20,
+      "execution_accuracy": 0.63,
+      "execution_accuracy_ci95": [
+        0.56,
+        0.695
+      ],
+      "valid_sql_rate": 0.8682,
+      "refusal_accuracy": 1.0,
+      "by_difficulty": {
+        "easy": {
+          "count": 60,
+          "execution_accuracy": 0.9333,
+          "ci95": [
+            0.8667,
+            0.9833
+          ]
+        },
+        "medium": {
+          "count": 80,
+          "execution_accuracy": 0.7375,
+          "ci95": [
+            0.6375,
+            0.8375
+          ]
+        },
+        "hard": {
+          "count": 60,
+          "execution_accuracy": 0.1833,
+          "ci95": [
+            0.0833,
+            0.2833
+          ]
+        }
+      },
+      "exact_ast_match_rate": 0.025,
+      "p50_latency_ms": 0.0,
+      "p95_latency_ms": 0.0,
+      "mean_output_tokens": 64.2,
+      "total_cost_usd": 0.0,
+      "usd_per_1k_queries": 0.0,
+      "error_taxonomy": {
+        "aggregation_error": 21,
+        "wrong_join": 43,
+        "hallucinated_column": 6,
+        "wrong_date_window": 1,
+        "false_refusal": 3
+      }
+    },
+    "T2": {
+      "system_id": "T2",
+      "system_name": "Qwen-2.5-Coder-32B API (OpenRouter)",
+      "kind": "api_teacher",
+      "model": "qwen/qwen-2.5-coder-32b-instruct",
+      "mode": "live",
+      "is_model_evidence": true,
+      "total_samples": 220,
+      "answerable_samples": 200,
+      "negative_samples": 20,
+      "execution_accuracy": 0.6,
+      "execution_accuracy_ci95": [
+        0.53,
+        0.67
+      ],
+      "valid_sql_rate": 0.7182,
+      "refusal_accuracy": 1.0,
+      "by_difficulty": {
+        "easy": {
+          "count": 60,
+          "execution_accuracy": 0.9333,
+          "ci95": [
+            0.8667,
+            0.9833
+          ]
+        },
+        "medium": {
+          "count": 80,
+          "execution_accuracy": 0.675,
+          "ci95": [
+            0.575,
+            0.775
+          ]
+        },
+        "hard": {
+          "count": 60,
+          "execution_accuracy": 0.1667,
+          "ci95": [
+            0.0833,
+            0.2667
+          ]
+        }
+      },
+      "exact_ast_match_rate": 0.03,
+      "p50_latency_ms": 0.0,
+      "p95_latency_ms": 0.0,
+      "mean_output_tokens": 48.2,
+      "total_cost_usd": 0.0,
+      "usd_per_1k_queries": 0.0,
+      "error_taxonomy": {
+        "aggregation_error": 26,
+        "wrong_join": 12,
+        "false_refusal": 18,
+        "hallucinated_column": 21,
+        "syntax_or_guardrail_error": 3
+      }
+    }
+  },
+  "mcnemar_tests": {}
+}

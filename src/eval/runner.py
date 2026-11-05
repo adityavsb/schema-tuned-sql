@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import concurrent.futures
 import json
 import re
 import time
@@ -255,6 +256,7 @@ def run_evaluation_suite(
     config: EvalConfig,
     mode: str = "offline_smoke",
     limit: int | None = None,
+    system_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     """Executes configured systems across the test set and computes paired McNemar statistics."""
     test_path = Path(config.test_path)
@@ -278,7 +280,13 @@ def run_evaluation_suite(
     all_system_records: dict[str, list[dict[str, Any]]] = {}
     system_summaries: dict[str, dict[str, Any]] = {}
 
-    for sys_spec in config.systems:
+    active_systems = (
+        [s for s in config.systems if s.id in set(system_ids)]
+        if system_ids is not None
+        else config.systems
+    )
+
+    for sys_spec in active_systems:
         records: list[dict[str, Any]] = []
         prompt_mode = (
             "schema_rag"
@@ -286,8 +294,8 @@ def run_evaluation_suite(
             else ("few_shot" if sys_spec.kind == "few_shot" else "zero_shot")
         )
 
-        for item in items:
-            user_prompt = retriever.format_prompt(
+        formatted_prompts = [
+            retriever.format_prompt(
                 question=item["question"],
                 mode=prompt_mode,
                 few_shot_k=sys_spec.few_shot_k,
@@ -295,9 +303,11 @@ def run_evaluation_suite(
                 top_defs=sys_spec.rag_top_defs,
                 top_examples=sys_spec.rag_top_examples,
             )
+            for item in items
+        ]
 
-            if mode == "offline_smoke":
-                # Deterministic smoke wiring check ONLY (never reported as model evidence)
+        if mode == "offline_smoke":
+            for item in items:
                 t0 = time.perf_counter()
                 if item.get("is_negative_query"):
                     raw_out = "REFUSAL: UNANSWERABLE_FROM_SCHEMA"
@@ -314,10 +324,15 @@ def run_evaluation_suite(
                     completion_tokens=len(raw_out.split()),
                     cost_usd=0.0,
                 )
-            else:
-                resp = call_llm(
+                records.append(rec)
+        else:
+            print(f"\n[*] Evaluating system {sys_spec.id} ({sys_spec.name}) across {len(items)} items...")
+            responses: list[Any] = [None] * len(items)
+
+            def _fetch_completion(idx: int, p: str) -> tuple[int, Any]:
+                res = call_llm(
                     model=sys_spec.model,
-                    prompt=user_prompt,
+                    prompt=p,
                     system_prompt=SYSTEM_INSTRUCTION,
                     temperature=config.temperature,
                     max_tokens=config.max_tokens,
@@ -325,6 +340,24 @@ def run_evaluation_suite(
                     max_usd=config.max_usd,
                     budget_ledger_path=config.budget_ledger_path,
                 )
+                return idx, res
+
+            workers = 5
+            completed_count = 0
+            with concurrent.futures.ThreadPoolExecutor(max_workers=workers) as executor:
+                futures = [
+                    executor.submit(_fetch_completion, idx, p)
+                    for idx, p in enumerate(formatted_prompts)
+                ]
+                for fut in concurrent.futures.as_completed(futures):
+                    idx, resp = fut.result()
+                    responses[idx] = resp
+                    completed_count += 1
+                    if completed_count % 25 == 0 or completed_count == len(items):
+                        print(f"    [{sys_spec.id}] Progress: {completed_count}/{len(items)} items fetched ({completed_count / len(items) * 100:.1f}%)")
+
+            # Evaluate execution in DuckDB deterministically in order
+            for item, resp in zip(items, responses, strict=True):
                 rec = evaluate_single_item(
                     item=item,
                     raw_completion=resp.content,
@@ -335,7 +368,7 @@ def run_evaluation_suite(
                     completion_tokens=resp.completion_tokens,
                     cost_usd=resp.cost_usd,
                 )
-            records.append(rec)
+                records.append(rec)
 
         all_system_records[sys_spec.id] = records
         system_summaries[sys_spec.id] = summarize_system_run(
@@ -377,11 +410,17 @@ def main() -> None:
         help="Evaluation mode ('offline_smoke' for wiring verification, 'live' for real model runs)",
     )
     parser.add_argument("--limit", type=int, default=None, help="Optional cap on test items")
+    parser.add_argument(
+        "--systems",
+        default=None,
+        help="Optional comma-separated system IDs to evaluate (e.g. 'T1' or 'T1,T2')",
+    )
     parser.add_argument("--out", default=None, help="Optional output JSON path")
     args = parser.parse_args()
 
     cfg = EvalConfig.from_yaml(args.config)
-    report = run_evaluation_suite(cfg, mode=args.mode, limit=args.limit)
+    sys_ids = [s.strip() for s in args.systems.split(",") if s.strip()] if args.systems else None
+    report = run_evaluation_suite(cfg, mode=args.mode, limit=args.limit, system_ids=sys_ids)
 
     if args.out:
         out_path = Path(args.out)
