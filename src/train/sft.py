@@ -67,15 +67,9 @@ def run_sft(
 ) -> dict[str, Any]:
     """Validates T4 safety, formats data, and executes (or dry-runs) LoRA/QLoRA SFT."""
     validate_t4_constraints(config)
-    examples = prepare_formatted_dataset(
-        data_path=config.train_data_path,
-        subset_size=config.train_subset_size,
-        include_schema=config.include_schema_in_prompt,
-    )
 
     if dry_run:
         # Verify completion-only token masking on synthetic token IDs
-        sample = examples[0]
         dummy_prompt_ids = [10, 11, 12, 99, 100]
         dummy_resp_ids = [201, 202, 203]
         masked = mask_completion_only_labels(
@@ -84,18 +78,42 @@ def run_sft(
         )
         assert masked[:5] == [-100, -100, -100, -100, -100]
         assert masked[5:] == [201, 202, 203]
+
+        data_file = Path(config.train_data_path)
+        if data_file.is_file():
+            examples = prepare_formatted_dataset(
+                data_path=config.train_data_path,
+                subset_size=config.train_subset_size,
+                include_schema=config.include_schema_in_prompt,
+            )
+            num_examples: int | None = len(examples)
+            sample_prompt_chars: int | None = len(examples[0]["prompt"])
+            sample_completion_chars: int | None = len(examples[0]["completion"])
+        else:
+            num_examples = None
+            sample_prompt_chars = None
+            sample_completion_chars = None
+
         return {
-            "status": "dry_run_verified",
+            "status": "pending_t4_gpu_run",
+            "is_hardware_telemetry": False,
             "run_name": config.run_name,
             "base_model": config.base_model,
             "precision": config.precision,
             "attn_implementation": config.attn_implementation,
             "qlora_enabled": config.quantization.enabled,
             "lora_r": config.lora.r,
-            "num_examples": len(examples),
-            "sample_prompt_chars": len(sample["prompt"]),
-            "sample_completion_chars": len(sample["completion"]),
+            "lora_alpha": config.lora.alpha,
+            "num_examples": num_examples,
+            "sample_prompt_chars": sample_prompt_chars,
+            "sample_completion_chars": sample_completion_chars,
         }
+
+    examples = prepare_formatted_dataset(
+        data_path=config.train_data_path,
+        subset_size=config.train_subset_size,
+        include_schema=config.include_schema_in_prompt,
+    )
 
     # Live GPU execution path (Tesla T4)
     import torch

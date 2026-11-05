@@ -30,30 +30,26 @@ def main() -> None:
         f"[1/5] Built general_sql_holdout.jsonl ({len(holdout_items)} items, sha256={holdout_sha[:12]}...)"
     )
 
-    # 2. Run Execution-Verified Distillation Pipeline (5,000 verified pairs)
+    # 2. Initialize Distillation Manifest (pending live OpenRouter run)
     dg_cfg = DataGenConfig.from_yaml(REPO_ROOT / "configs" / "data_gen.yaml")
-    dg_cfg.output_dir = str(REPO_ROOT / "data" / "train")
-    manifest = run_distillation_pipeline(dg_cfg, mode="template_bootstrap")
-    # Normalise relative paths in manifest for portability
-    for split_info in manifest["scaling_splits"].values():
-        p_str = str(split_info["path"])
-        if str(REPO_ROOT) in p_str:
-            split_info["path"] = p_str.replace(str(REPO_ROOT) + "/", "")
-    (REPO_ROOT / "data" / "train" / "manifest.json").write_text(
-        json.dumps(manifest, indent=2), encoding="utf-8"
-    )
+    train_dir = REPO_ROOT / "data" / "train"
+    dg_cfg.output_dir = str(train_dir)
+    # Remove any leftover offline/template JSONL splits so only real OpenRouter splits live in data/train/
+    for old_split in train_dir.glob("train_*.jsonl"):
+        old_split.unlink()
+
+    manifest = run_distillation_pipeline(dg_cfg, mode="dry_run")
+    (train_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     (results_dir / "distillation_manifest.json").write_text(
         json.dumps(manifest, indent=2), encoding="utf-8"
     )
-    print(
-        f"[2/5] Generated {manifest['total_verified_pairs']} execution-verified pairs across scaling splits."
-    )
+    print("[2/5] Initialized distillation manifest (status=pending_openrouter_run).")
 
-    # 3. Verify T4 SFT configurations and completion-only loss masking
+    # 3. Verify T4 SFT configurations (pending live T4 GPU run)
     sft_checks = {}
     for cfg_name in ("sft_qwen15b_lora.yaml", "sft_qwen3b_qlora.yaml", "sft_qwen7b_qlora.yaml"):
         sft_cfg = SFTConfig.from_yaml(REPO_ROOT / "configs" / cfg_name)
-        sft_cfg.train_data_path = str(REPO_ROOT / "data" / "train" / "train_5000.jsonl")
+        sft_cfg.train_data_path = str(train_dir / "train_5000.jsonl")
         sft_checks[sft_cfg.run_name] = run_sft(sft_cfg, dry_run=True)
     (results_dir / "t4_sft_dryrun_manifest.json").write_text(
         json.dumps(sft_checks, indent=2), encoding="utf-8"

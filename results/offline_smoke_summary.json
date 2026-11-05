@@ -120,6 +120,59 @@
       "total_samples": 220,
       "answerable_samples": 200,
       "negative_samples": 20,
+      "execution_accuracy": 0.955,
+      "execution_accuracy_ci95": [
+        0.925,
+        0.98
+      ],
+      "valid_sql_rate": 0.9091,
+      "refusal_accuracy": 1.0,
+      "by_difficulty": {
+        "easy": {
+          "count": 60,
+          "execution_accuracy": 1.0,
+          "ci95": [
+            1.0,
+            1.0
+          ]
+        },
+        "medium": {
+          "count": 80,
+          "execution_accuracy": 0.95,
+          "ci95": [
+            0.9,
+            0.9875
+          ]
+        },
+        "hard": {
+          "count": 60,
+          "execution_accuracy": 0.9167,
+          "ci95": [
+            0.8333,
+            0.9833
+          ]
+        }
+      },
+      "exact_ast_match_rate": 1.0,
+      "p50_latency_ms": 0.0,
+      "p95_latency_ms": 0.0,
+      "mean_output_tokens": 24.9,
+      "total_cost_usd": 0.0,
+      "usd_per_1k_queries": 0.0,
+      "error_taxonomy": {
+        "aggregation_error": 9
+      }
+    },
+    "T1": {
+      "system_id": "T1",
+      "system_name": "DeepSeek Teacher API (OpenRouter)",
+      "kind": "api_teacher",
+      "model": "deepseek/deepseek-chat",
+      "mode": "offline_smoke",
+      "is_model_evidence": false,
+      "total_samples": 220,
+      "answerable_samples": 200,
+      "negative_samples": 20,
       "execution_accuracy": 0.945,
       "execution_accuracy_ci95": [
         0.91,
@@ -163,59 +216,6 @@
         "aggregation_error": 11
       }
     },
-    "T1": {
-      "system_id": "T1",
-      "system_name": "DeepSeek Teacher API (OpenRouter)",
-      "kind": "api_teacher",
-      "model": "deepseek/deepseek-chat",
-      "mode": "offline_smoke",
-      "is_model_evidence": false,
-      "total_samples": 220,
-      "answerable_samples": 200,
-      "negative_samples": 20,
-      "execution_accuracy": 0.955,
-      "execution_accuracy_ci95": [
-        0.925,
-        0.98
-      ],
-      "valid_sql_rate": 0.9091,
-      "refusal_accuracy": 1.0,
-      "by_difficulty": {
-        "easy": {
-          "count": 60,
-          "execution_accuracy": 1.0,
-          "ci95": [
-            1.0,
-            1.0
-          ]
-        },
-        "medium": {
-          "count": 80,
-          "execution_accuracy": 0.95,
-          "ci95": [
-            0.9,
-            0.9875
-          ]
-        },
-        "hard": {
-          "count": 60,
-          "execution_accuracy": 0.9167,
-          "ci95": [
-            0.8333,
-            0.9833
-          ]
-        }
-      },
-      "exact_ast_match_rate": 1.0,
-      "p50_latency_ms": 0.0,
-      "p95_latency_ms": 0.0,
-      "mean_output_tokens": 24.9,
-      "total_cost_usd": 0.0,
-      "usd_per_1k_queries": 0.0,
-      "error_taxonomy": {
-        "aggregation_error": 9
-      }
-    },
     "T2": {
       "system_id": "T2",
       "system_name": "Qwen-2.5-Coder-32B API (OpenRouter)",
@@ -226,10 +226,10 @@
       "total_samples": 220,
       "answerable_samples": 200,
       "negative_samples": 20,
-      "execution_accuracy": 0.955,
+      "execution_accuracy": 0.96,
       "execution_accuracy_ci95": [
-        0.925,
-        0.98
+        0.93,
+        0.985
       ],
       "valid_sql_rate": 0.9091,
       "refusal_accuracy": 1.0,
@@ -244,10 +244,10 @@
         },
         "medium": {
           "count": 80,
-          "execution_accuracy": 0.95,
+          "execution_accuracy": 0.9625,
           "ci95": [
-            0.9,
-            0.9875
+            0.9125,
+            1.0
           ]
         },
         "hard": {
@@ -266,7 +266,7 @@
       "total_cost_usd": 0.0,
       "usd_per_1k_queries": 0.0,
       "error_taxonomy": {
-        "aggregation_error": 9
+        "aggregation_error": 8
       }
     },
     "S1": {
@@ -332,10 +332,10 @@
       "total_samples": 220,
       "answerable_samples": 200,
       "negative_samples": 20,
-      "execution_accuracy": 0.96,
+      "execution_accuracy": 0.955,
       "execution_accuracy_ci95": [
-        0.93,
-        0.985
+        0.925,
+        0.98
       ],
       "valid_sql_rate": 0.9091,
       "refusal_accuracy": 1.0,
@@ -350,10 +350,10 @@
         },
         "medium": {
           "count": 80,
-          "execution_accuracy": 0.9625,
+          "execution_accuracy": 0.95,
           "ci95": [
-            0.9125,
-            1.0
+            0.9,
+            0.9875
           ]
         },
         "hard": {
@@ -372,7 +372,7 @@
       "total_cost_usd": 0.0,
       "usd_per_1k_queries": 0.0,
       "error_taxonomy": {
-        "aggregation_error": 8
+        "aggregation_error": 9
       }
     },
     "S3": {
@@ -484,23 +484,23 @@
   },
   "mcnemar_tests": {
     "S2_vs_T1": {
-      "b_a_only": 1,
+      "b_a_only": 2,
       "c_b_only": 0,
-      "discordant_pairs": 1,
-      "p_value": 1.0,
+      "discordant_pairs": 2,
+      "p_value": 0.5,
       "is_significant_05": false
     },
     "S2_vs_B2": {
-      "b_a_only": 3,
+      "b_a_only": 0,
       "c_b_only": 0,
-      "discordant_pairs": 3,
-      "p_value": 0.25,
+      "discordant_pairs": 0,
+      "p_value": 1.0,
       "is_significant_05": false
     },
     "S1_vs_S2": {
       "b_a_only": 0,
-      "c_b_only": 1,
-      "discordant_pairs": 1,
+      "c_b_only": 0,
+      "discordant_pairs": 0,
       "p_value": 1.0,
       "is_significant_05": false
     }

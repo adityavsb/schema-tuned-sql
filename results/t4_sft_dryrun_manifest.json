@@ -1,38 +1,44 @@
 {
   "sft-qwen15b-lora": {
-    "status": "dry_run_verified",
+    "status": "pending_t4_gpu_run",
+    "is_hardware_telemetry": false,
     "run_name": "sft-qwen15b-lora",
     "base_model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
     "precision": "fp16",
     "attn_implementation": "sdpa",
     "qlora_enabled": false,
     "lora_r": 16,
-    "num_examples": 5000,
-    "sample_prompt_chars": 8346,
-    "sample_completion_chars": 824
+    "lora_alpha": 32,
+    "num_examples": null,
+    "sample_prompt_chars": null,
+    "sample_completion_chars": null
   },
   "sft-qwen3b-qlora": {
-    "status": "dry_run_verified",
+    "status": "pending_t4_gpu_run",
+    "is_hardware_telemetry": false,
     "run_name": "sft-qwen3b-qlora",
     "base_model": "Qwen/Qwen2.5-Coder-3B-Instruct",
     "precision": "fp16",
     "attn_implementation": "sdpa",
     "qlora_enabled": true,
     "lora_r": 16,
-    "num_examples": 5000,
-    "sample_prompt_chars": 8346,
-    "sample_completion_chars": 824
+    "lora_alpha": 32,
+    "num_examples": null,
+    "sample_prompt_chars": null,
+    "sample_completion_chars": null
   },
   "sft-qwen7b-qlora": {
-    "status": "dry_run_verified",
+    "status": "pending_t4_gpu_run",
+    "is_hardware_telemetry": false,
     "run_name": "sft-qwen7b-qlora",
     "base_model": "Qwen/Qwen2.5-Coder-7B-Instruct",
     "precision": "fp16",
     "attn_implementation": "sdpa",
     "qlora_enabled": true,
     "lora_r": 16,
-    "num_examples": 5000,
-    "sample_prompt_chars": 8346,
-    "sample_completion_chars": 824
+    "lora_alpha": 32,
+    "num_examples": null,
+    "sample_prompt_chars": null,
+    "sample_completion_chars": null
   }
 }

@@ -26,7 +26,7 @@ To ensure evaluation integrity and prevent data contamination during distillatio
 | :--- | :--- | :---: | :--- | :--- | :--- |
 | **Test (Frozen)** | `data/test_gold.jsonl` | **220** | 60 Easy (30%) · 80 Med (40%) · 60 Hard (30%) · 20 Refusal | Final unbiased system ranking | `84a938a29aa438c1c901f4dfadbfe13af01451ef2c55177010493133f90b6b5c` |
 | **Dev** | `data/dev.jsonl` | **100** | 30 Easy (30%) · 40 Med (40%) · 30 Hard (30%) | Prompt tuning, few-shot demos, hyperparameter selection | `2e5064b46fe8001332aff4b21398fa86d134fa15d26c1113606603c57e44925f` |
-| **Train (Distilled)** | `data/train/` | **5,000** | Scaled across 500 / 1k / 2k / 5k subsets | Model fine-tuning (LoRA / QLoRA) | Manifests committed with dedupe report |
+| **Train (Distilled)** | `data/train/` | **N/A (Target: 5,000)** | Scaled across 500 / 1k / 2k / 5k subsets | Model fine-tuning (LoRA / QLoRA) | `pending_openrouter_run` (`data/train/manifest.json`) |
 
 ---
 

@@ -20,13 +20,49 @@ from warehouse.generate_data import generate_synthetic_warehouse
 
 def run_distillation_pipeline(
     config: DataGenConfig,
-    mode: str = "template_bootstrap",
+    mode: str = "dry_run",
     target_override: int | None = None,
 ) -> dict[str, Any]:
     """Generates, verifies, deduplicates, and writes training data splits."""
-    target_n = target_override or config.target_verified_pairs
     out_dir = Path(config.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+
+    if mode == "dry_run":
+        empty_bucket = {
+            "attempted": None,
+            "accepted": None,
+            "acceptance_rate": None,
+            "rejected_execution": None,
+            "rejected_contamination": None,
+            "rejected_duplicate": None,
+        }
+        manifest = {
+            "run_name": config.run_name,
+            "mode": "dry_run",
+            "status": "pending_openrouter_run",
+            "is_live_teacher_distillation": False,
+            "is_model_evidence": False,
+            "primary_teacher": config.primary_teacher,
+            "secondary_teacher": config.secondary_teacher
+            if config.require_dual_agreement
+            else None,
+            "total_verified_pairs": None,
+            "contamination_threshold": config.contamination_sim_threshold,
+            "contaminated_removed": None,
+            "duplicates_removed": None,
+            "rejection_breakdown": None,
+            "acceptance_by_difficulty": {
+                "easy": dict(empty_bucket),
+                "medium": dict(empty_bucket),
+                "hard": dict(empty_bucket),
+            },
+            "scaling_splits": {},
+        }
+        manifest_path = out_dir / "manifest.json"
+        manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        return manifest
+
+    target_n = target_override or config.target_verified_pairs
 
     conn = generate_synthetic_warehouse(
         db_path=":memory:",
@@ -204,9 +240,9 @@ def main() -> None:
     parser.add_argument("--config", default="configs/data_gen.yaml", help="Path to data_gen YAML")
     parser.add_argument(
         "--mode",
-        choices=["template_bootstrap", "live"],
-        default="template_bootstrap",
-        help="Generation mode ('template_bootstrap' for offline verified SQL, 'live' for OpenRouter teacher)",
+        choices=["dry_run", "template_bootstrap", "live"],
+        default="dry_run",
+        help="Generation mode ('dry_run' for pending status, 'template_bootstrap' for offline smoke, 'live' for OpenRouter teacher)",
     )
     parser.add_argument("--target", type=int, default=None, help="Override target pair count")
     args = parser.parse_args()

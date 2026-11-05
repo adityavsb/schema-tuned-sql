@@ -53,10 +53,10 @@ def test_completion_only_label_masking():
 
 def test_sft_dry_run_and_dpo_preference_builder():
     cfg = SFTConfig.from_yaml(REPO_ROOT / "configs" / "sft_qwen3b_qlora.yaml")
-    cfg.train_data_path = str(REPO_ROOT / "data" / "train" / "train_500.jsonl")
+    cfg.train_data_path = str(REPO_ROOT / "data" / "dev.jsonl")
     cfg.train_subset_size = 50
     res = run_sft(cfg, dry_run=True)
-    assert res["status"] == "dry_run_verified"
+    assert res["status"] == "pending_t4_gpu_run"
     assert res["qlora_enabled"] is True
     assert res["num_examples"] == 50
 

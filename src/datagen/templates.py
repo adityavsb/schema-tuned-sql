@@ -24,11 +24,7 @@ PERSONAS = [
 
 
 def generate_candidate_candidates(seed: int = 42, count: int = 5500) -> list[dict[str, Any]]:
-    """Generates a diverse pool of analytical question/SQL candidates across difficulty buckets.
-
-    Also injects realistic ~11% execution-invalid or empty-result teacher errors in the candidate stream
-    so the execution verification filter records empirical acceptance rates by difficulty bucket.
-    """
+    """Generates a diverse pool of analytical question prompts across difficulty buckets and personas."""
     rng = random.Random(seed)
     candidates: list[dict[str, Any]] = []
 
@@ -53,13 +49,7 @@ def generate_candidate_candidates(seed: int = 42, count: int = 5500) -> list[dic
                 f"[{persona_label} #{idx}] What is the AWS EC2 instance hardware temperature for workspace_{idx:03d}?",
             ]
             q = rng.choice(unanswerable_topics)
-            # Simulate occasional teacher failure to refuse (~10% of negative candidates)
-            bad_neg = idx % 10 == 0
-            sql = (
-                "SELECT credit_score FROM accounts"
-                if bad_neg
-                else "REFUSAL: UNANSWERABLE_FROM_SCHEMA"
-            )
+            sql = "REFUSAL: UNANSWERABLE_FROM_SCHEMA"
             candidates.append(
                 {
                     "candidate_id": f"cand_{idx:05d}",
@@ -105,10 +95,6 @@ def generate_candidate_candidates(seed: int = 42, count: int = 5500) -> list[dic
                 ist = rng.choice(inv_statuses)
                 q = f"[{persona_label} #{idx}] What is the average invoice amount for '{ist}' invoices (batch {idx})?"
                 sql = f"SELECT AVG(amount) AS avg_{idx} FROM invoices WHERE status = '{ist}'"
-
-            # Simulate ~6% teacher syntax/column errors on easy queries
-            if idx % 17 == 0:
-                sql = "SELECT COUNT(non_existent_col) FROM accounts"
 
             candidates.append(
                 {
@@ -182,10 +168,6 @@ def generate_candidate_candidates(seed: int = 42, count: int = 5500) -> list[dic
                     f"WHERE ea.experiment_id = '{exp_id}' AND ea.variant = '{var}' AND s.status = 'active'"
                 )
 
-            # Simulate ~11% teacher join/binder errors on medium queries
-            if idx % 9 == 0:
-                sql = "SELECT SUM(s.mrr_amount) FROM subscriptions s JOIN unknown_table u ON s.id = u.id"
-
             candidates.append(
                 {
                     "candidate_id": f"cand_{idx:05d}",
@@ -256,10 +238,6 @@ def generate_candidate_candidates(seed: int = 42, count: int = 5500) -> list[dic
                     f"WHERE ea.experiment_id = '{exp_id}' AND e.event_type = '{et}' "
                     f"GROUP BY ea.variant ORDER BY ea.variant"
                 )
-
-            # Simulate ~18% teacher execution/window failures on hard queries
-            if idx % 6 == 0:
-                sql = "SELECT account_id, LAG(mrr_amount) FROM accounts WHERE non_valid_window = 1"
 
             candidates.append(
                 {

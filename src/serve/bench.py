@@ -63,22 +63,31 @@ def run_serving_benchmark(
 ) -> dict[str, Any]:
     """Runs or models T4 serving latency, batch throughput, VRAM, and cost break-even."""
     if mode == "dry_run":
-        # Analytical / dry-run verification of cost model and batch scaling structure
-        econ_batch8 = compute_serving_economics(
-            api_model=config.comparison_api_model,
-            avg_prompt_tokens=config.avg_prompt_tokens,
-            avg_completion_tokens=config.avg_completion_tokens,
-            t4_hourly_usd=config.t4_hourly_usd,
-            throughput_qps=2.45,
-        )
+        # Dry-run without physical CUDA GPU: GPU throughput and break-even fields remain None (N/A)
         return {
             "run_name": config.run_name,
             "mode": "dry_run",
+            "status": "pending_t4_gpu_run",
             "is_hardware_telemetry": False,
             "base_model": config.base_model,
             "backend": config.backend,
             "batch_sizes": config.batch_sizes,
-            "economics": econ_batch8,
+            "batches": None,
+            "economics": {
+                "price_table_date": PRICE_TABLE_DATE,
+                "comparison_api_model": config.comparison_api_model,
+                "avg_prompt_tokens": None,
+                "avg_completion_tokens": None,
+                "api_usd_per_1k_queries": None,
+                "t4_hourly_usd_assumption": None,
+                "t4_throughput_qps": None,
+                "t4_saturated_usd_per_1k_queries": None,
+                "saturated_cost_advantage_x": None,
+                "dedicated_t4_daily_usd": None,
+                "dedicated_t4_monthly_usd": None,
+                "break_even_queries_per_day": None,
+                "break_even_queries_per_month": None,
+            },
         }
 
     # Live CUDA T4 execution path

@@ -1,64 +1,41 @@
 {
   "run_name": "metricpulse-distill-v1",
-  "mode": "template_bootstrap",
+  "mode": "dry_run",
+  "status": "pending_openrouter_run",
   "is_live_teacher_distillation": false,
-  "primary_teacher": "template_bootstrap",
+  "is_model_evidence": false,
+  "primary_teacher": "deepseek/deepseek-chat",
   "secondary_teacher": null,
-  "total_verified_pairs": 5000,
+  "total_verified_pairs": null,
   "contamination_threshold": 0.85,
-  "contaminated_removed": 0,
-  "duplicates_removed": 0,
-  "rejection_breakdown": {
-    "execution_error: BinderException": 339,
-    "guardrail_rejected": 237,
-    "negative_query_not_refused": 39
-  },
+  "contaminated_removed": null,
+  "duplicates_removed": null,
+  "rejection_breakdown": null,
   "acceptance_by_difficulty": {
     "easy": {
-      "attempted": 1572,
-      "accepted": 1482,
-      "acceptance_rate": 0.9427,
-      "rejected_execution": 90,
-      "rejected_contamination": 0,
-      "rejected_duplicate": 0
+      "attempted": null,
+      "accepted": null,
+      "acceptance_rate": null,
+      "rejected_execution": null,
+      "rejected_contamination": null,
+      "rejected_duplicate": null
     },
     "medium": {
-      "attempted": 2021,
-      "accepted": 1784,
-      "acceptance_rate": 0.8827,
-      "rejected_execution": 237,
-      "rejected_contamination": 0,
-      "rejected_duplicate": 0
+      "attempted": null,
+      "accepted": null,
+      "acceptance_rate": null,
+      "rejected_execution": null,
+      "rejected_contamination": null,
+      "rejected_duplicate": null
     },
     "hard": {
-      "attempted": 2022,
-      "accepted": 1734,
-      "acceptance_rate": 0.8576,
-      "rejected_execution": 288,
-      "rejected_contamination": 0,
-      "rejected_duplicate": 0
+      "attempted": null,
+      "accepted": null,
+      "acceptance_rate": null,
+      "rejected_execution": null,
+      "rejected_contamination": null,
+      "rejected_duplicate": null
     }
   },
-  "scaling_splits": {
-    "train_500": {
-      "path": "data/train/train_500.jsonl",
-      "count": 500,
-      "sha256": "ecf1a1f545c552ae1e2839195e0dc2de548d7a18f26f0c49b19a8a1212d6aecb"
-    },
-    "train_1000": {
-      "path": "data/train/train_1000.jsonl",
-      "count": 1000,
-      "sha256": "f2293c015a9e3fce6832c7333fe1d4f70a44ff4175d49f1330865f4885cda555"
-    },
-    "train_2000": {
-      "path": "data/train/train_2000.jsonl",
-      "count": 2000,
-      "sha256": "693b2a786aab115a4516a895373e246d4228a58bb8f8c29464e9c273b5c79df9"
-    },
-    "train_5000": {
-      "path": "data/train/train_5000.jsonl",
-      "count": 5000,
-      "sha256": "fed1ba97378df58d6bb53df847b709eb3e4d751295573481381c16dcfbacab74"
-    }
-  }
+  "scaling_splits": {}
 }
