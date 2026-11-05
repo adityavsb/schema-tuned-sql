@@ -1,41 +1,68 @@
 {
   "run_name": "metricpulse-distill-v1",
-  "mode": "dry_run",
-  "status": "pending_openrouter_run",
-  "is_live_teacher_distillation": false,
-  "is_model_evidence": false,
+  "mode": "live",
+  "is_live_teacher_distillation": true,
   "primary_teacher": "deepseek/deepseek-chat",
   "secondary_teacher": null,
-  "total_verified_pairs": null,
+  "questions_per_call": 8,
+  "total_api_calls": 278,
+  "total_verified_pairs": 2000,
   "contamination_threshold": 0.85,
-  "contaminated_removed": null,
-  "duplicates_removed": null,
-  "rejection_breakdown": null,
+  "contaminated_removed": 2,
+  "duplicates_removed": 0,
+  "rejection_breakdown": {
+    "execution_error: BinderException": 125,
+    "unexpected_refusal_on_positive": 27,
+    "null_scalar_result": 42,
+    "contaminated_exact_ast": 2,
+    "empty_result_set": 26
+  },
   "acceptance_by_difficulty": {
     "easy": {
-      "attempted": null,
-      "accepted": null,
-      "acceptance_rate": null,
-      "rejected_execution": null,
-      "rejected_contamination": null,
-      "rejected_duplicate": null
+      "attempted": 596,
+      "accepted": 591,
+      "acceptance_rate": 0.9916,
+      "rejected_execution": 4,
+      "rejected_contamination": 1,
+      "rejected_duplicate": 0
     },
     "medium": {
-      "attempted": null,
-      "accepted": null,
-      "acceptance_rate": null,
-      "rejected_execution": null,
-      "rejected_contamination": null,
-      "rejected_duplicate": null
+      "attempted": 831,
+      "accepted": 765,
+      "acceptance_rate": 0.9206,
+      "rejected_execution": 65,
+      "rejected_contamination": 1,
+      "rejected_duplicate": 0
     },
     "hard": {
-      "attempted": null,
-      "accepted": null,
-      "acceptance_rate": null,
-      "rejected_execution": null,
-      "rejected_contamination": null,
-      "rejected_duplicate": null
+      "attempted": 795,
+      "accepted": 644,
+      "acceptance_rate": 0.8101,
+      "rejected_execution": 151,
+      "rejected_contamination": 0,
+      "rejected_duplicate": 0
     }
   },
-  "scaling_splits": {}
+  "scaling_splits": {
+    "train_250": {
+      "path": "data/train/train_250.jsonl",
+      "count": 250,
+      "sha256": "0191a41cdd0abe985ab4b0f0db7d9473218ff0bec77bca4417b7eb55b749aeb4"
+    },
+    "train_500": {
+      "path": "data/train/train_500.jsonl",
+      "count": 500,
+      "sha256": "18f0d55f3159e68cdcf50d7142df62364a1900fdd749aeee1a97bef0acf593a4"
+    },
+    "train_1000": {
+      "path": "data/train/train_1000.jsonl",
+      "count": 1000,
+      "sha256": "81f7d3b67afe4c356f34c61b907d8361531309ffbd1ef5944e96e693cc31bf1c"
+    },
+    "train_2000": {
+      "path": "data/train/train_2000.jsonl",
+      "count": 2000,
+      "sha256": "529c352e0907bc15e7ddfd662b419cf95fa039d6e26f2f6f5897e9c3e6fac0d5"
+    }
+  }
 }

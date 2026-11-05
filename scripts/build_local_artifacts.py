@@ -49,7 +49,7 @@ def main() -> None:
     sft_checks = {}
     for cfg_name in ("sft_qwen15b_lora.yaml", "sft_qwen3b_qlora.yaml", "sft_qwen7b_qlora.yaml"):
         sft_cfg = SFTConfig.from_yaml(REPO_ROOT / "configs" / cfg_name)
-        sft_cfg.train_data_path = str(train_dir / "train_5000.jsonl")
+        sft_cfg.train_data_path = str(train_dir / "train_2000.jsonl")
         sft_checks[sft_cfg.run_name] = run_sft(sft_cfg, dry_run=True)
     (results_dir / "t4_sft_dryrun_manifest.json").write_text(
         json.dumps(sft_checks, indent=2), encoding="utf-8"

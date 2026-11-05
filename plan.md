@@ -42,7 +42,7 @@ Fine-tuning small open LLMs (`Qwen2.5-Coder-1.5B-Instruct` and `3B-Instruct`) on
 
 - **M1:** Warehouse (`warehouse/schema.sql`, `generate_data.py`), business definitions (`business_definitions.md`), AST guardrail (`src/utils/db.py`), and frozen evaluation splits (`data/test_gold.jsonl`, `data/dev.jsonl`).
 - **M2:** OpenRouter provider layer (`src/llm/`), SHA-256 disk cache, hard dollar budget cap (`max_usd: 15.0`), and RAG baseline (`src/eval/rag.py`).
-- **M3:** Execution-verified distillation pipeline (`src/datagen/`), contamination filtering, scaling splits (`500`, `1k`, `2k`, `5k`), and 200-item general SQL holdout.
+- **M3:** Execution-verified distillation pipeline (`src/datagen/`), contamination filtering, scaling splits (`250`, `500`, `1k`, `2k`, batched at 8 questions/call), and 200-item general SQL holdout.
 - **M4:** T4-safe SFT trainer (`src/train/sft.py`), completion-only loss masking (`src/train/collator.py`), preference builder (`src/train/prefs.py`), and MLflow tracking (`src/utils/tracking.py`).
 - **M5:** T4 serving benchmark and break-even cost model (`src/serve/bench.py`).
 - **M6:** Technical README report, ADRs (`docs/decisions.md`), remote T4 runner notebook (`notebooks/t4_runner.ipynb`), and automated README-to-JSON provenance tests.

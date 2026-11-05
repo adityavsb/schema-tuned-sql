@@ -9,9 +9,9 @@
     "qlora_enabled": false,
     "lora_r": 16,
     "lora_alpha": 32,
-    "num_examples": null,
-    "sample_prompt_chars": null,
-    "sample_completion_chars": null
+    "num_examples": 2000,
+    "sample_prompt_chars": 8346,
+    "sample_completion_chars": 936
   },
   "sft-qwen3b-qlora": {
     "status": "pending_t4_gpu_run",
@@ -23,9 +23,9 @@
     "qlora_enabled": true,
     "lora_r": 16,
     "lora_alpha": 32,
-    "num_examples": null,
-    "sample_prompt_chars": null,
-    "sample_completion_chars": null
+    "num_examples": 2000,
+    "sample_prompt_chars": 8346,
+    "sample_completion_chars": 936
   },
   "sft-qwen7b-qlora": {
     "status": "pending_t4_gpu_run",
@@ -37,8 +37,8 @@
     "qlora_enabled": true,
     "lora_r": 16,
     "lora_alpha": 32,
-    "num_examples": null,
-    "sample_prompt_chars": null,
-    "sample_completion_chars": null
+    "num_examples": 2000,
+    "sample_prompt_chars": 8346,
+    "sample_completion_chars": 936
   }
 }

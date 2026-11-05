@@ -37,13 +37,20 @@ def test_readme_numbers_and_anti_slop_provenance():
     assert holdout_sha[:12] in readme
     assert smoke["general_holdout_sha256"] == holdout_sha
 
-    # 2. If OpenRouter teacher distillation has not run yet, manifest values must be None and README must show N/A
+    # 2. Distillation manifest provenance
     if not distill.get("is_live_teacher_distillation"):
         assert distill["status"] == "pending_openrouter_run"
         assert distill["total_verified_pairs"] is None
         for bucket in ("easy", "medium", "hard"):
             assert distill["acceptance_by_difficulty"][bucket]["acceptance_rate"] is None
         assert "status: pending_openrouter_run" in readme
+    else:
+        assert str(distill["total_verified_pairs"]) in readme
+        assert f"{distill['acceptance_by_difficulty']['easy']['acceptance_rate'] * 100:.2f}%" in readme
+        assert f"{distill['acceptance_by_difficulty']['medium']['acceptance_rate'] * 100:.2f}%" in readme
+        assert f"{distill['acceptance_by_difficulty']['hard']['acceptance_rate'] * 100:.2f}%" in readme
+        for split_meta in distill["scaling_splits"].values():
+            assert split_meta["sha256"] in readme
 
     # 3. If Tesla T4 GPU serving benchmark has not run yet, GPU telemetry must be None and README must show N/A
     if not serving.get("is_hardware_telemetry"):
@@ -61,6 +68,17 @@ def test_readme_numbers_and_anti_slop_provenance():
         if not meta.get("is_hardware_telemetry"):
             assert meta["status"] == "pending_t4_gpu_run"
 
-    # 5. Honest mode disclosure must be present
-    assert "is_model_evidence: false" in readme
+    # 5. Honest mode disclosure and live API evaluation numbers
+    or_eval_file = REPO_ROOT / "results" / "openrouter_eval_summary.json"
+    if or_eval_file.is_file():
+        or_data = json.loads(or_eval_file.read_text(encoding="utf-8"))
+        if or_data.get("is_model_evidence"):
+            t1 = or_data["systems"]["T1"]
+            t2 = or_data["systems"]["T2"]
+            assert f"{t1['execution_accuracy'] * 100:.2f}%" in readme
+            assert f"{t2['execution_accuracy'] * 100:.2f}%" in readme
+            assert f"{t1['valid_sql_rate'] * 100:.2f}%" in readme
+            assert f"{t2['valid_sql_rate'] * 100:.2f}%" in readme
+            assert "openrouter_eval_summary.json" in readme
+
     assert "is_hardware_telemetry: false" in readme

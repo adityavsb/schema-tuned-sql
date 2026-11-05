@@ -10,7 +10,7 @@
 
 ## Headline Question
 
-> *Can a 1.5B–3B open model, fine-tuned on 5,000 execution-verified examples for one customer schema, match a larger API model on that schema at a fraction of the cost per query, and what does it lose on general SQL?*
+> *Can a 1.5B–3B open model, fine-tuned on 2,000 execution-verified examples for one customer schema, match a larger API model on that schema at a fraction of the cost per query, and what does it lose on general SQL?*
 
 Forward-deployed AI engineers frequently face a customer whose analytical questions depend on bespoke semantic definitions (*Weekly Active User*, *Activated Account*, *Net Revenue Retention*, *Urgent Ticket SLA*) that generic models hallucinate on, and whose security posture forbids sending table schemas or customer queries to external frontier APIs. This repository implements the complete forward-deployed loop:
 1. **Customer Semantic Warehouse (`warehouse/`):** 11 normalized B2B SaaS tables in DuckDB seeded deterministically (`seed=42`) paired with authoritative metric rules in [`warehouse/business_definitions.md`](warehouse/business_definitions.md).
@@ -37,7 +37,7 @@ flowchart TD
     A["Customer Warehouse (DuckDB)<br/>11 Tables + business_definitions.md"] --> B["Candidate Generation<br/>Templates + OpenRouter Teachers (DeepSeek / Qwen)"]
     B --> C["SQLVerifier & AST Guardrail<br/>sqlglot Parse + DuckDB Execution + Non-Empty Check"]
     C --> D["ContaminationFilter<br/>AST Canonical Match + 3-Gram Cosine < 0.85 vs Test/Dev"]
-    D --> E["Verified Scaling Splits<br/>500 / 1,000 / 2,000 / 5,000 Pairs"]
+    D --> E["Verified Scaling Splits<br/>250 / 500 / 1,000 / 2,000 Pairs"]
     E --> F["Tesla T4 SFT (sm_75, 16GB)<br/>Qwen2.5-Coder 1.5B FP16 LoRA & 3B 4-bit QLoRA"]
     F --> G["Evaluation Harness (Frozen 220 Test + 200 General SQL)<br/>Execution Accuracy, 2,000 Bootstrap CIs, Paired McNemar"]
     F --> H["T4 Serving & Economics<br/>Latency, Batch Throughput, Peak VRAM, Break-Even Volume"]
@@ -53,13 +53,15 @@ flowchart TD
 
 ### 1. System Evaluation on Frozen `test_gold.jsonl` ($n=220$) & `general_sql_holdout.jsonl` ($n=200$)
 
+Source: [`results/openrouter_eval_summary.json`](results/openrouter_eval_summary.json) (Live OpenRouter API evaluations).
+
 | ID | System | Execution Accuracy (EX %) | 95% Bootstrap CI ($B=2000$) | Valid SQL % | Refusal Acc % ($n=20$) | McNemar $p$ vs `B2` | General-SQL Holdout EX % ($n=200$) |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | **B0** | `Qwen2.5-Coder-3B` Zero-Shot | N/A | N/A | N/A | N/A | N/A | N/A |
 | **B1** | `Qwen2.5-Coder-3B` Few-Shot ($k=5$) | N/A | N/A | N/A | N/A | N/A | N/A |
 | **B2** | `Qwen2.5-Coder-3B` + Schema-RAG | N/A | N/A | N/A | N/A | — | N/A |
-| **T1** | Teacher API (`deepseek/deepseek-chat`) | N/A | N/A | N/A | N/A | N/A | N/A |
-| **T2** | Peer API (`qwen/qwen-2.5-coder-32b-instruct`) | N/A | N/A | N/A | N/A | N/A | N/A |
+| **T1** | Teacher API (`deepseek/deepseek-chat`) | **63.00%** | `[56.0%, 69.5%]` | **86.82%** | **100.0%** | N/A | N/A |
+| **T2** | Peer API (`qwen/qwen-2.5-coder-32b-instruct`) | **60.00%** | `[53.0%, 67.0%]` | **71.82%** | **100.0%** | N/A | N/A |
 | **S1** | Fine-Tuned `Qwen2.5-Coder-1.5B` (FP16 LoRA) | N/A | N/A | N/A | N/A | N/A | N/A |
 | **S2** | Fine-Tuned `Qwen2.5-Coder-3B` (4-bit QLoRA) | N/A | N/A | N/A | N/A | N/A | N/A |
 | **S3** | Fine-Tuned `Qwen2.5-Coder-7B` (4-bit QLoRA, Stretch) | N/A | N/A | N/A | N/A | N/A | N/A |
@@ -69,14 +71,27 @@ flowchart TD
 
 ### 2. Execution-Verified Distillation Acceptance Rates
 
-Source: [`results/distillation_manifest.json`](results/distillation_manifest.json) (`status: pending_openrouter_run`).
+Source: [`results/distillation_manifest.json`](results/distillation_manifest.json) (`mode: live`, Teacher: `deepseek/deepseek-chat`).
 
-| Difficulty Bucket | Candidates Attempted | Execution Verified & Clean | Acceptance Rate | Rejected (Execution / Guardrail) | Rejected (Test/Dev Contamination) |
+| Difficulty Bucket | Candidates Attempted | Execution Verified & Clean | Acceptance Rate | Rejected (Execution / Empty) | Rejected (Test/Dev Contamination) |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Easy** (Single-table filter/agg) | N/A | N/A | N/A | N/A | N/A |
-| **Medium** (2–3 table joins, `GROUP BY`, `HAVING`) | N/A | N/A | N/A | N/A | N/A |
-| **Hard** (Business definitions, CTEs, windows, refusals) | N/A | N/A | N/A | N/A | N/A |
-| **Total** | N/A | N/A | N/A | N/A | N/A |
+| **Easy** (Single-table filter/agg) | 596 | 591 | **99.16%** | 4 | 1 |
+| **Medium** (2–3 table joins, `GROUP BY`, `HAVING`) | 831 | 765 | **92.06%** | 65 | 1 |
+| **Hard** (Business definitions, CTEs, windows, refusals) | 795 | 644 | **81.01%** | 151 | 0 |
+| **Total** | **2,222** | **2,000** | **90.01%** | **220** | **2** |
+
+**Rejection Taxonomy (`222` total rejected candidates across 278 batched API calls):**
+- `execution_error: BinderException`: **125** (56.3% — hallucinated column bindings or ambiguous window clauses)
+- `null_scalar_result`: **42** (18.9% — queries executing cleanly but returning `NULL` for aggregates)
+- `unexpected_refusal_on_positive`: **27** (12.2% — teacher over-refusing answerable analytical questions)
+- `empty_result_set`: **26** (11.7% — unsatisfiable filters on seeded warehouse data)
+- `contaminated_exact_ast`: **2** (0.9% — quarantined by `ContaminationFilter` against frozen test/dev)
+
+**Verified Scaling Split Checksums:**
+- `train_250.jsonl` (`250` pairs): `0191a41cdd0abe985ab4b0f0db7d9473218ff0bec77bca4417b7eb55b749aeb4`
+- `train_500.jsonl` (`500` pairs): `18f0d55f3159e68cdcf50d7142df62364a1900fdd749aeee1a97bef0acf593a4`
+- `train_1000.jsonl` (`1,000` pairs): `81f7d3b67afe4c356f34c61b907d8361531309ffbd1ef5944e96e693cc31bf1c`
+- `train_2000.jsonl` (`2,000` pairs): `529c352e0907bc15e7ddfd662b419cf95fa039d6e26f2f6f5897e9c3e6fac0d5`
 
 ---
 
@@ -86,9 +101,9 @@ Source: [`results/t4_sft_dryrun_manifest.json`](results/t4_sft_dryrun_manifest.j
 
 | Config ID | Base Checkpoint | Precision / Quantization | Attention | LoRA Rank ($r / \alpha$) | Verified Train Examples | Peak VRAM (GB) | Train Time (min) | Status |
 | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| `sft-qwen15b-lora` (`S1`) | `Qwen/Qwen2.5-Coder-1.5B-Instruct` | FP16 LoRA (FP32 master adapters) | `sdpa` | `16 / 32` | N/A | N/A | N/A | `pending_t4_gpu_run` |
-| `sft-qwen3b-qlora` (`S2`) | `Qwen/Qwen2.5-Coder-3B-Instruct` | 4-bit NF4 QLoRA (double quant, FP16 compute) | `sdpa` | `16 / 32` | N/A | N/A | N/A | `pending_t4_gpu_run` |
-| `sft-qwen7b-qlora` (`S3`) | `Qwen/Qwen2.5-Coder-7B-Instruct` | 4-bit NF4 QLoRA (max seq 1024) | `sdpa` | `16 / 32` | N/A | N/A | N/A | `pending_t4_gpu_run` |
+| `sft-qwen15b-lora` (`S1`) | `Qwen/Qwen2.5-Coder-1.5B-Instruct` | FP16 LoRA (FP32 master adapters) | `sdpa` | `16 / 32` | 2,000 | N/A | N/A | `pending_t4_gpu_run` |
+| `sft-qwen3b-qlora` (`S2`) | `Qwen/Qwen2.5-Coder-3B-Instruct` | 4-bit NF4 QLoRA (double quant, FP16 compute) | `sdpa` | `16 / 32` | 2,000 | N/A | N/A | `pending_t4_gpu_run` |
+| `sft-qwen7b-qlora` (`S3`) | `Qwen/Qwen2.5-Coder-7B-Instruct` | 4-bit NF4 QLoRA (max seq 1024) | `sdpa` | `16 / 32` | 2,000 | N/A | N/A | `pending_t4_gpu_run` |
 
 ---
 
