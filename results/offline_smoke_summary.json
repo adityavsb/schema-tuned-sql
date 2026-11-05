@@ -1,0 +1,509 @@
+{
+  "run_name": "metricpulse-benchmark-v1",
+  "mode": "offline_smoke",
+  "is_model_evidence": false,
+  "test_path": "/Users/diabolixw/Downloads/claude_code/schema-tuned-sql/data/test_gold.jsonl",
+  "systems": {
+    "B0": {
+      "system_id": "B0",
+      "system_name": "Qwen2.5-Coder-3B Zero-Shot (Schema in Prompt)",
+      "kind": "zero_shot",
+      "model": "Qwen/Qwen2.5-Coder-3B-Instruct",
+      "mode": "offline_smoke",
+      "is_model_evidence": false,
+      "total_samples": 220,
+      "answerable_samples": 200,
+      "negative_samples": 20,
+      "execution_accuracy": 0.955,
+      "execution_accuracy_ci95": [
+        0.925,
+        0.98
+      ],
+      "valid_sql_rate": 0.9091,
+      "refusal_accuracy": 1.0,
+      "by_difficulty": {
+        "easy": {
+          "count": 60,
+          "execution_accuracy": 1.0,
+          "ci95": [
+            1.0,
+            1.0
+          ]
+        },
+        "medium": {
+          "count": 80,
+          "execution_accuracy": 0.95,
+          "ci95": [
+            0.9,
+            0.9875
+          ]
+        },
+        "hard": {
+          "count": 60,
+          "execution_accuracy": 0.9167,
+          "ci95": [
+            0.8333,
+            0.9833
+          ]
+        }
+      },
+      "exact_ast_match_rate": 1.0,
+      "p50_latency_ms": 0.0,
+      "p95_latency_ms": 0.0,
+      "mean_output_tokens": 24.9,
+      "total_cost_usd": 0.0,
+      "usd_per_1k_queries": 0.0,
+      "error_taxonomy": {
+        "aggregation_error": 9
+      }
+    },
+    "B1": {
+      "system_id": "B1",
+      "system_name": "Qwen2.5-Coder-3B Few-Shot (k=5)",
+      "kind": "few_shot",
+      "model": "Qwen/Qwen2.5-Coder-3B-Instruct",
+      "mode": "offline_smoke",
+      "is_model_evidence": false,
+      "total_samples": 220,
+      "answerable_samples": 200,
+      "negative_samples": 20,
+      "execution_accuracy": 0.96,
+      "execution_accuracy_ci95": [
+        0.93,
+        0.985
+      ],
+      "valid_sql_rate": 0.9091,
+      "refusal_accuracy": 1.0,
+      "by_difficulty": {
+        "easy": {
+          "count": 60,
+          "execution_accuracy": 1.0,
+          "ci95": [
+            1.0,
+            1.0
+          ]
+        },
+        "medium": {
+          "count": 80,
+          "execution_accuracy": 0.9625,
+          "ci95": [
+            0.9125,
+            1.0
+          ]
+        },
+        "hard": {
+          "count": 60,
+          "execution_accuracy": 0.9167,
+          "ci95": [
+            0.8333,
+            0.9833
+          ]
+        }
+      },
+      "exact_ast_match_rate": 1.0,
+      "p50_latency_ms": 0.0,
+      "p95_latency_ms": 0.0,
+      "mean_output_tokens": 24.9,
+      "total_cost_usd": 0.0,
+      "usd_per_1k_queries": 0.0,
+      "error_taxonomy": {
+        "aggregation_error": 8
+      }
+    },
+    "B2": {
+      "system_id": "B2",
+      "system_name": "Qwen2.5-Coder-3B + Schema/Definition RAG",
+      "kind": "schema_rag",
+      "model": "Qwen/Qwen2.5-Coder-3B-Instruct",
+      "mode": "offline_smoke",
+      "is_model_evidence": false,
+      "total_samples": 220,
+      "answerable_samples": 200,
+      "negative_samples": 20,
+      "execution_accuracy": 0.945,
+      "execution_accuracy_ci95": [
+        0.91,
+        0.975
+      ],
+      "valid_sql_rate": 0.9091,
+      "refusal_accuracy": 1.0,
+      "by_difficulty": {
+        "easy": {
+          "count": 60,
+          "execution_accuracy": 1.0,
+          "ci95": [
+            1.0,
+            1.0
+          ]
+        },
+        "medium": {
+          "count": 80,
+          "execution_accuracy": 0.9375,
+          "ci95": [
+            0.875,
+            0.9875
+          ]
+        },
+        "hard": {
+          "count": 60,
+          "execution_accuracy": 0.9,
+          "ci95": [
+            0.8167,
+            0.9667
+          ]
+        }
+      },
+      "exact_ast_match_rate": 1.0,
+      "p50_latency_ms": 0.0,
+      "p95_latency_ms": 0.0,
+      "mean_output_tokens": 24.9,
+      "total_cost_usd": 0.0,
+      "usd_per_1k_queries": 0.0,
+      "error_taxonomy": {
+        "aggregation_error": 11
+      }
+    },
+    "T1": {
+      "system_id": "T1",
+      "system_name": "DeepSeek Teacher API (OpenRouter)",
+      "kind": "api_teacher",
+      "model": "deepseek/deepseek-chat",
+      "mode": "offline_smoke",
+      "is_model_evidence": false,
+      "total_samples": 220,
+      "answerable_samples": 200,
+      "negative_samples": 20,
+      "execution_accuracy": 0.955,
+      "execution_accuracy_ci95": [
+        0.925,
+        0.98
+      ],
+      "valid_sql_rate": 0.9091,
+      "refusal_accuracy": 1.0,
+      "by_difficulty": {
+        "easy": {
+          "count": 60,
+          "execution_accuracy": 1.0,
+          "ci95": [
+            1.0,
+            1.0
+          ]
+        },
+        "medium": {
+          "count": 80,
+          "execution_accuracy": 0.95,
+          "ci95": [
+            0.9,
+            0.9875
+          ]
+        },
+        "hard": {
+          "count": 60,
+          "execution_accuracy": 0.9167,
+          "ci95": [
+            0.8333,
+            0.9833
+          ]
+        }
+      },
+      "exact_ast_match_rate": 1.0,
+      "p50_latency_ms": 0.0,
+      "p95_latency_ms": 0.0,
+      "mean_output_tokens": 24.9,
+      "total_cost_usd": 0.0,
+      "usd_per_1k_queries": 0.0,
+      "error_taxonomy": {
+        "aggregation_error": 9
+      }
+    },
+    "T2": {
+      "system_id": "T2",
+      "system_name": "Qwen-2.5-Coder-32B API (OpenRouter)",
+      "kind": "api_teacher",
+      "model": "qwen/qwen-2.5-coder-32b-instruct",
+      "mode": "offline_smoke",
+      "is_model_evidence": false,
+      "total_samples": 220,
+      "answerable_samples": 200,
+      "negative_samples": 20,
+      "execution_accuracy": 0.955,
+      "execution_accuracy_ci95": [
+        0.925,
+        0.98
+      ],
+      "valid_sql_rate": 0.9091,
+      "refusal_accuracy": 1.0,
+      "by_difficulty": {
+        "easy": {
+          "count": 60,
+          "execution_accuracy": 1.0,
+          "ci95": [
+            1.0,
+            1.0
+          ]
+        },
+        "medium": {
+          "count": 80,
+          "execution_accuracy": 0.95,
+          "ci95": [
+            0.9,
+            0.9875
+          ]
+        },
+        "hard": {
+          "count": 60,
+          "execution_accuracy": 0.9167,
+          "ci95": [
+            0.8333,
+            0.9833
+          ]
+        }
+      },
+      "exact_ast_match_rate": 1.0,
+      "p50_latency_ms": 0.0,
+      "p95_latency_ms": 0.0,
+      "mean_output_tokens": 24.9,
+      "total_cost_usd": 0.0,
+      "usd_per_1k_queries": 0.0,
+      "error_taxonomy": {
+        "aggregation_error": 9
+      }
+    },
+    "S1": {
+      "system_id": "S1",
+      "system_name": "LoRA SFT Qwen2.5-Coder-1.5B (FP16)",
+      "kind": "sft_student",
+      "model": "Qwen/Qwen2.5-Coder-1.5B-Instruct",
+      "mode": "offline_smoke",
+      "is_model_evidence": false,
+      "total_samples": 220,
+      "answerable_samples": 200,
+      "negative_samples": 20,
+      "execution_accuracy": 0.955,
+      "execution_accuracy_ci95": [
+        0.925,
+        0.98
+      ],
+      "valid_sql_rate": 0.9091,
+      "refusal_accuracy": 1.0,
+      "by_difficulty": {
+        "easy": {
+          "count": 60,
+          "execution_accuracy": 1.0,
+          "ci95": [
+            1.0,
+            1.0
+          ]
+        },
+        "medium": {
+          "count": 80,
+          "execution_accuracy": 0.95,
+          "ci95": [
+            0.9,
+            0.9875
+          ]
+        },
+        "hard": {
+          "count": 60,
+          "execution_accuracy": 0.9167,
+          "ci95": [
+            0.8333,
+            0.9833
+          ]
+        }
+      },
+      "exact_ast_match_rate": 1.0,
+      "p50_latency_ms": 0.0,
+      "p95_latency_ms": 0.0,
+      "mean_output_tokens": 24.9,
+      "total_cost_usd": 0.0,
+      "usd_per_1k_queries": 0.0,
+      "error_taxonomy": {
+        "aggregation_error": 9
+      }
+    },
+    "S2": {
+      "system_id": "S2",
+      "system_name": "QLoRA SFT Qwen2.5-Coder-3B (4-bit NF4)",
+      "kind": "sft_student",
+      "model": "Qwen/Qwen2.5-Coder-3B-Instruct",
+      "mode": "offline_smoke",
+      "is_model_evidence": false,
+      "total_samples": 220,
+      "answerable_samples": 200,
+      "negative_samples": 20,
+      "execution_accuracy": 0.96,
+      "execution_accuracy_ci95": [
+        0.93,
+        0.985
+      ],
+      "valid_sql_rate": 0.9091,
+      "refusal_accuracy": 1.0,
+      "by_difficulty": {
+        "easy": {
+          "count": 60,
+          "execution_accuracy": 1.0,
+          "ci95": [
+            1.0,
+            1.0
+          ]
+        },
+        "medium": {
+          "count": 80,
+          "execution_accuracy": 0.9625,
+          "ci95": [
+            0.9125,
+            1.0
+          ]
+        },
+        "hard": {
+          "count": 60,
+          "execution_accuracy": 0.9167,
+          "ci95": [
+            0.8333,
+            0.9833
+          ]
+        }
+      },
+      "exact_ast_match_rate": 1.0,
+      "p50_latency_ms": 0.0,
+      "p95_latency_ms": 0.0,
+      "mean_output_tokens": 24.9,
+      "total_cost_usd": 0.0,
+      "usd_per_1k_queries": 0.0,
+      "error_taxonomy": {
+        "aggregation_error": 8
+      }
+    },
+    "S3": {
+      "system_id": "S3",
+      "system_name": "QLoRA SFT Qwen2.5-Coder-7B (Stretch)",
+      "kind": "sft_student",
+      "model": "Qwen/Qwen2.5-Coder-7B-Instruct",
+      "mode": "offline_smoke",
+      "is_model_evidence": false,
+      "total_samples": 220,
+      "answerable_samples": 200,
+      "negative_samples": 20,
+      "execution_accuracy": 0.96,
+      "execution_accuracy_ci95": [
+        0.93,
+        0.985
+      ],
+      "valid_sql_rate": 0.9091,
+      "refusal_accuracy": 1.0,
+      "by_difficulty": {
+        "easy": {
+          "count": 60,
+          "execution_accuracy": 1.0,
+          "ci95": [
+            1.0,
+            1.0
+          ]
+        },
+        "medium": {
+          "count": 80,
+          "execution_accuracy": 0.9625,
+          "ci95": [
+            0.9125,
+            1.0
+          ]
+        },
+        "hard": {
+          "count": 60,
+          "execution_accuracy": 0.9167,
+          "ci95": [
+            0.8333,
+            0.9833
+          ]
+        }
+      },
+      "exact_ast_match_rate": 1.0,
+      "p50_latency_ms": 0.0,
+      "p95_latency_ms": 0.0,
+      "mean_output_tokens": 24.9,
+      "total_cost_usd": 0.0,
+      "usd_per_1k_queries": 0.0,
+      "error_taxonomy": {
+        "aggregation_error": 8
+      }
+    },
+    "S4": {
+      "system_id": "S4",
+      "system_name": "QLoRA SFT 3B + Schema RAG at Inference",
+      "kind": "sft_rag",
+      "model": "Qwen/Qwen2.5-Coder-3B-Instruct",
+      "mode": "offline_smoke",
+      "is_model_evidence": false,
+      "total_samples": 220,
+      "answerable_samples": 200,
+      "negative_samples": 20,
+      "execution_accuracy": 0.96,
+      "execution_accuracy_ci95": [
+        0.93,
+        0.985
+      ],
+      "valid_sql_rate": 0.9091,
+      "refusal_accuracy": 1.0,
+      "by_difficulty": {
+        "easy": {
+          "count": 60,
+          "execution_accuracy": 1.0,
+          "ci95": [
+            1.0,
+            1.0
+          ]
+        },
+        "medium": {
+          "count": 80,
+          "execution_accuracy": 0.9625,
+          "ci95": [
+            0.9125,
+            1.0
+          ]
+        },
+        "hard": {
+          "count": 60,
+          "execution_accuracy": 0.9167,
+          "ci95": [
+            0.8333,
+            0.9833
+          ]
+        }
+      },
+      "exact_ast_match_rate": 1.0,
+      "p50_latency_ms": 0.0,
+      "p95_latency_ms": 0.0,
+      "mean_output_tokens": 24.9,
+      "total_cost_usd": 0.0,
+      "usd_per_1k_queries": 0.0,
+      "error_taxonomy": {
+        "aggregation_error": 8
+      }
+    }
+  },
+  "mcnemar_tests": {
+    "S2_vs_T1": {
+      "b_a_only": 1,
+      "c_b_only": 0,
+      "discordant_pairs": 1,
+      "p_value": 1.0,
+      "is_significant_05": false
+    },
+    "S2_vs_B2": {
+      "b_a_only": 3,
+      "c_b_only": 0,
+      "discordant_pairs": 3,
+      "p_value": 0.25,
+      "is_significant_05": false
+    },
+    "S1_vs_S2": {
+      "b_a_only": 0,
+      "c_b_only": 1,
+      "discordant_pairs": 1,
+      "p_value": 1.0,
+      "is_significant_05": false
+    }
+  },
+  "general_holdout_sha256": "51a6f67d1e0ac55e48d4e2e61978921fb011ad34cf68253cc63a2e71c4a3ec4e"
+}

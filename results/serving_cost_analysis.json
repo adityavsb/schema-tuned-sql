@@ -1,0 +1,27 @@
+{
+  "run_name": "t4-serving-bench",
+  "mode": "dry_run",
+  "is_hardware_telemetry": false,
+  "base_model": "Qwen/Qwen2.5-Coder-3B-Instruct",
+  "backend": "vllm_fp16",
+  "batch_sizes": [
+    1,
+    8,
+    32
+  ],
+  "economics": {
+    "price_table_date": "2026-11-05",
+    "comparison_api_model": "deepseek/deepseek-chat",
+    "avg_prompt_tokens": 950,
+    "avg_completion_tokens": 110,
+    "api_usd_per_1k_queries": 0.164,
+    "t4_hourly_usd_assumption": 0.35,
+    "t4_throughput_qps": 2.45,
+    "t4_saturated_usd_per_1k_queries": 0.0397,
+    "saturated_cost_advantage_x": 4.13,
+    "dedicated_t4_daily_usd": 8.4,
+    "dedicated_t4_monthly_usd": 252.0,
+    "break_even_queries_per_day": 51220,
+    "break_even_queries_per_month": 1536600
+  }
+}
