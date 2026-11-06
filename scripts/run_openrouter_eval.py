@@ -31,7 +31,7 @@ from src.datagen.verifier import SQLVerifier  # noqa: E402
 from src.eval.rag import SYSTEM_INSTRUCTION, SchemaDefinitionRetriever  # noqa: E402
 from src.eval.runner import evaluate_single_item, run_evaluation_suite  # noqa: E402
 from src.llm.pricing import BudgetTracker  # noqa: E402
-from src.llm.provider import call_llm, mask_secret  # noqa: E402
+from src.llm.provider import call_llm  # noqa: E402
 from src.utils.config import DataGenConfig, EvalConfig, load_dotenv  # noqa: E402
 from src.utils.db import ReadOnlySQLGuardrail  # noqa: E402
 from warehouse.generate_data import generate_synthetic_warehouse  # noqa: E402
@@ -41,7 +41,6 @@ def verify_api_key_present() -> str:
     """Loads .env and verifies OPENROUTER_API_KEY is present before dispatching calls."""
     load_dotenv(REPO_ROOT / ".env")
     key = os.environ.get("OPENROUTER_API_KEY", "").strip()
-    print(f"[*] OpenRouter API Key: {mask_secret(key)}")
     if not key:
         raise RuntimeError(
             "OPENROUTER_API_KEY is not set. Add OPENROUTER_API_KEY=sk-or-... to .env before running."

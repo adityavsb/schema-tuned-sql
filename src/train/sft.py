@@ -213,6 +213,8 @@ def run_sft(
             )
             train_res = trainer.train()
             trainer.save_model(str(out_dir))
+            # Also save to base output_dir for direct PEFT checkpoint resolution
+            trainer.save_model(str(config.output_dir))
             metrics = {
                 "train_loss": float(train_res.training_loss),
                 "seed": seed,

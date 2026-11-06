@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import concurrent.futures
+import hashlib
 import json
 import re
 import time
@@ -212,6 +213,136 @@ def evaluate_single_item(
     }
 
 
+class LocalInferenceResponse:
+    """Standardized completion container for local PyTorch/PEFT CUDA inference."""
+
+    def __init__(
+        self,
+        content: str,
+        latency_ms: float = 0.0,
+        completion_tokens: int = 0,
+        cost_usd: float = 0.0,
+    ) -> None:
+        self.content = content
+        self.latency_ms = latency_ms
+        self.completion_tokens = completion_tokens
+        self.cost_usd = cost_usd
+
+
+def run_cuda_local_inference(
+    sys_spec: SystemSpec,
+    prompts: list[str],
+    max_tokens: int = 512,
+    batch_size: int = 4,
+) -> list[LocalInferenceResponse]:
+    """Runs batch inference on a local CUDA GPU using Hugging Face transformers & PEFT."""
+    import torch
+    from peft import PeftModel
+    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+
+    if not torch.cuda.is_available():
+        raise RuntimeError(f"CUDA required for cuda_live evaluation of system {sys_spec.id}.")
+
+    print(f"\n[*] [CUDA] Initializing {sys_spec.id} ({sys_spec.name})...")
+    tokenizer = AutoTokenizer.from_pretrained(sys_spec.model, trust_remote_code=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    is_4bit = (
+        "3B" in sys_spec.model
+        or "7B" in sys_spec.model
+        or (sys_spec.adapter_path is not None and "qlora" in sys_spec.adapter_path.lower())
+    )
+    bnb_config = None
+    if is_4bit:
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_compute_dtype=torch.float16,
+        )
+
+    model = AutoModelForCausalLM.from_pretrained(
+        sys_spec.model,
+        quantization_config=bnb_config,
+        torch_dtype=torch.float16,
+        attn_implementation="sdpa",
+        device_map="auto",
+        trust_remote_code=True,
+    )
+
+    if sys_spec.adapter_path:
+        ad_path = Path(sys_spec.adapter_path)
+        if not (ad_path / "adapter_config.json").exists():
+            seed_dirs = sorted(ad_path.glob("seed_*"))
+            if seed_dirs:
+                ad_path = seed_dirs[0]
+        if (ad_path / "adapter_config.json").exists():
+            print(f"[*] Attaching PEFT adapter from {ad_path}...")
+            model = PeftModel.from_pretrained(model, str(ad_path))
+        else:
+            print(f"[!] Warning: No adapter found at {ad_path}, evaluating base model.")
+
+    model.eval()
+
+    responses: list[LocalInferenceResponse] = []
+    total = len(prompts)
+    print(f"[*] Generating SQL predictions on CUDA ({total} prompts, batch_size={batch_size})...")
+
+    for i in range(0, total, batch_size):
+        batch = prompts[i : i + batch_size]
+        chat_texts = []
+        for p in batch:
+            msgs = [
+                {"role": "system", "content": SYSTEM_INSTRUCTION},
+                {"role": "user", "content": p},
+            ]
+            chat_texts.append(
+                tokenizer.apply_chat_template(msgs, tokenize=False, add_generation_prompt=True)
+            )
+
+        inputs = tokenizer(
+            chat_texts, return_tensors="pt", padding=True, truncation=True, max_length=2048
+        ).to("cuda")
+
+        torch.cuda.synchronize()
+        t0 = time.perf_counter()
+        with torch.no_grad():
+            outputs = model.generate(
+                **inputs,
+                max_new_tokens=max_tokens,
+                do_sample=False,
+                pad_token_id=tokenizer.pad_token_id,
+            )
+        torch.cuda.synchronize()
+        dt_ms = (time.perf_counter() - t0) * 1000.0
+        avg_lat_ms = dt_ms / max(1, len(batch))
+
+        for j, out_ids in enumerate(outputs):
+            in_len = inputs["input_ids"][j].shape[0]
+            gen_ids = out_ids[in_len:]
+            gen_text = tokenizer.decode(gen_ids, skip_special_tokens=True).strip()
+            responses.append(
+                LocalInferenceResponse(
+                    content=gen_text,
+                    latency_ms=round(avg_lat_ms, 2),
+                    completion_tokens=int(len(gen_ids)),
+                    cost_usd=0.0,
+                )
+            )
+
+        if (i + batch_size) % 40 == 0 or (i + len(batch)) == total:
+            print(
+                f"    [{sys_spec.id}] Progress: {min(total, i + len(batch))}/{total} ({min(total, i + len(batch)) / total * 100:.1f}%)"
+            )
+
+    del model
+    del tokenizer
+    torch.cuda.empty_cache()
+
+    return responses
+
+
 def summarize_system_run(
     system: SystemSpec,
     records: list[dict[str, Any]],
@@ -240,7 +371,7 @@ def summarize_system_run(
         "kind": system.kind,
         "model": system.model,
         "mode": mode,
-        "is_model_evidence": mode == "live",
+        "is_model_evidence": mode in ("live", "cuda_live"),
         **core,
         "exact_ast_match_rate": round(float(np.mean(exact_matches)) if exact_matches else 0.0, 4),
         "p50_latency_ms": round(float(np.percentile(latencies, 50)) if latencies else 0.0, 2),
@@ -325,6 +456,31 @@ def run_evaluation_suite(
                     cost_usd=0.0,
                 )
                 records.append(rec)
+        elif mode == "cuda_live" and sys_spec.kind in (
+            "sft_student",
+            "sft_rag",
+            "zero_shot",
+            "few_shot",
+            "schema_rag",
+        ):
+            cuda_resps = run_cuda_local_inference(
+                sys_spec=sys_spec,
+                prompts=formatted_prompts,
+                max_tokens=config.max_tokens,
+                batch_size=4,
+            )
+            for item, c_resp in zip(items, cuda_resps, strict=True):
+                rec = evaluate_single_item(
+                    item=item,
+                    raw_completion=c_resp.content,
+                    conn=conn,
+                    guardrail=guardrail,
+                    float_tol=config.float_tolerance,
+                    latency_ms=c_resp.latency_ms,
+                    completion_tokens=c_resp.completion_tokens,
+                    cost_usd=c_resp.cost_usd,
+                )
+                records.append(rec)
         else:
             print(f"\n[*] Evaluating system {sys_spec.id} ({sys_spec.name}) across {len(items)} items...")
             responses: list[Any] = [None] * len(items)
@@ -379,6 +535,41 @@ def run_evaluation_suite(
             mode=mode,
         )
 
+        # Catastrophic forgetting check on cross-domain general SQL holdout
+        if (
+            mode == "cuda_live"
+            and sys_spec.kind in ("sft_student", "sft_rag")
+            and Path(config.general_holdout_path).is_file()
+        ):
+            from src.eval.general_holdout import GENERAL_SCHEMAS_DDL, evaluate_general_holdout
+
+            h_items = [
+                json.loads(line)
+                for line in Path(config.general_holdout_path)
+                .read_text(encoding="utf-8")
+                .splitlines()
+                if line.strip()
+            ]
+            h_prompts = [
+                f"### Database Schema:\n{GENERAL_SCHEMAS_DDL}\n\n### Task:\nWrite a clean DuckDB SQL query inside a ```sql ... ``` block to answer:\n{hit['question']}"
+                for hit in h_items
+            ]
+            print(
+                f"[*] Evaluating catastrophic forgetting on general holdout ({len(h_items)} items)..."
+            )
+            h_resps = run_cuda_local_inference(
+                sys_spec=sys_spec,
+                prompts=h_prompts,
+                max_tokens=config.max_tokens,
+                batch_size=4,
+            )
+            h_preds = {
+                h_items[k]["id"]: extract_sql(h_resps[k].content) for k in range(len(h_items))
+            }
+            h_report = evaluate_general_holdout(h_preds, holdout_path=config.general_holdout_path)
+            system_summaries[sys_spec.id]["general_sql_holdout_ex"] = h_report["execution_accuracy"]
+            system_summaries[sys_spec.id]["general_sql_holdout_ci95"] = h_report["ci95"]
+
     # Compute paired McNemar tests on answerable items
     mcnemar_results: dict[str, Any] = {}
     for id_a, id_b in config.mcnemar_pairs:
@@ -389,12 +580,18 @@ def run_evaluation_suite(
             preds_b = [bool(r["is_match"]) for r in recs_b]
             mcnemar_results[f"{id_a}_vs_{id_b}"] = compute_mcnemar_test(preds_a, preds_b)
 
+    holdout_p = Path(config.general_holdout_path)
+    holdout_sha = (
+        hashlib.sha256(holdout_p.read_bytes()).hexdigest() if holdout_p.is_file() else None
+    )
+
     conn.close()
     return {
         "run_name": config.run_name,
         "mode": mode,
-        "is_model_evidence": mode == "live",
+        "is_model_evidence": mode in ("live", "cuda_live"),
         "test_path": config.test_path,
+        "general_holdout_sha256": holdout_sha,
         "systems": system_summaries,
         "mcnemar_tests": mcnemar_results,
     }
@@ -405,9 +602,9 @@ def main() -> None:
     parser.add_argument("--config", default="configs/eval.yaml", help="Path to eval YAML config")
     parser.add_argument(
         "--mode",
-        choices=["offline_smoke", "live"],
+        choices=["offline_smoke", "live", "cuda_live"],
         default="offline_smoke",
-        help="Evaluation mode ('offline_smoke' for wiring verification, 'live' for real model runs)",
+        help="Evaluation mode ('offline_smoke' for wiring verification, 'live' for OpenRouter, 'cuda_live' for local T4 GPU)",
     )
     parser.add_argument("--limit", type=int, default=None, help="Optional cap on test items")
     parser.add_argument(

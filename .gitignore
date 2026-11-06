@@ -37,6 +37,5 @@ Thumbs.db
 .artifacts/
 reports/
 data/train/generated_*.jsonl
-data/train/train_*.jsonl
 data/train/unfiltered_*.jsonl
 !data/train/manifest.json
