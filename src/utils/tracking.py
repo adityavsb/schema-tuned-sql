@@ -18,6 +18,39 @@ FORBIDDEN_PARAM_KEYS = {
 }
 
 
+def _inside_git_work_tree(start: Path | None = None) -> bool:
+    """True when a .git directory exists at or above `start`, without invoking git.
+
+    Calling the git binary outside a checkout on Kaggle prints
+    `fatal: not a git repository (or any parent up to mount point /kaggle)`
+    because git refuses to cross the /kaggle filesystem boundary.
+    """
+    path = (start or Path.cwd()).resolve()
+    for candidate in (path, *path.parents):
+        if (candidate / ".git").exists():
+            return True
+        if candidate.as_posix() in {"/kaggle", "/kaggle/working"}:
+            break
+    return False
+
+
+def _skip_git_metadata_outside_repo() -> None:
+    """Stop mlflow from shelling out to git when this process is not in a clone."""
+    if _inside_git_work_tree():
+        return
+    try:
+        import mlflow.utils.git_utils as git_utils
+    except ImportError:
+        return
+
+    def _missing(*_args: Any, **_kwargs: Any) -> None:
+        return None
+
+    for name in ("get_git_commit", "get_git_branch", "get_git_repo_url"):
+        if hasattr(git_utils, name):
+            setattr(git_utils, name, _missing)
+
+
 def sanitize_params(params: dict[str, Any]) -> dict[str, Any]:
     """Filters out any parameter key that could contain credentials."""
     clean: dict[str, Any] = {}
@@ -63,6 +96,7 @@ class MLflowTracker:
         mlf = self._get_mlflow()
         safe_params = sanitize_params(params or {})
         if mlf:
+            _skip_git_metadata_outside_repo()
             with mlf.start_run(run_name=run_name) as run:
                 self._active_run = run
                 if safe_params:

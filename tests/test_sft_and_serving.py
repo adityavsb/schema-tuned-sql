@@ -10,8 +10,14 @@ from src.eval.rag import SchemaDefinitionRetriever
 from src.serve.bench import compute_serving_economics
 from src.train.collator import format_sft_example, mask_completion_only_labels
 from src.train.prefs import build_execution_preference_pairs
-from src.train.sft import T4HardwareConstraintError, run_sft, validate_t4_constraints
+from src.train.sft import (
+    T4HardwareConstraintError,
+    run_sft,
+    t4_trainer_precision_flags,
+    validate_t4_constraints,
+)
 from src.utils.config import SFTConfig
+from src.utils.tracking import _inside_git_work_tree
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -118,3 +124,15 @@ def test_schema_definition_retriever_and_serving_economics():
     assert econ["t4_saturated_usd_per_1k_queries"] == 0.0397
     assert econ["saturated_cost_advantage_x"] == 4.13
     assert econ["break_even_queries_per_day"] == 51220
+
+
+def test_qlora_disables_fp16_grad_scaler_on_t4():
+    assert t4_trainer_precision_flags(False) == {"fp16": True, "bf16": False}
+    assert t4_trainer_precision_flags(True) == {"fp16": False, "bf16": False}
+
+
+def test_git_metadata_probe_stops_at_kaggle_mount():
+    assert _inside_git_work_tree(Path("/kaggle/working")) is False
+    assert _inside_git_work_tree(Path("/kaggle/working/schema-tuned-sql/src")) is False
+    assert _inside_git_work_tree(REPO_ROOT) is True
+    assert _inside_git_work_tree(REPO_ROOT / "notebooks") is True

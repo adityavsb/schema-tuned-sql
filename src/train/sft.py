@@ -39,6 +39,28 @@ def validate_t4_constraints(config: SFTConfig) -> None:
         )
 
 
+def t4_trainer_precision_flags(quantized: bool) -> dict[str, bool]:
+    """Mixed-precision flags for Tesla T4.
+
+    Full-precision LoRA keeps the fp16 GradScaler. QLoRA must not: Qwen2.5
+    checkpoints are bfloat16, and the fp16 scaler raises
+    ``_amp_foreach_non_finite_check_and_unscale_cuda`` for that dtype.
+    QLoRA keeps fp32 adapters and float16 compute inside bitsandbytes.
+    """
+    if quantized:
+        return {"fp16": False, "bf16": False}
+    return {"fp16": True, "bf16": False}
+
+
+def apply_t4_trainer_precision(trl_args: Any, quantized: bool) -> None:
+    """Write T4 precision flags onto a Trainer config after it is constructed."""
+    for key, value in t4_trainer_precision_flags(quantized).items():
+        if hasattr(trl_args, key):
+            setattr(trl_args, key, value)
+    if quantized and isinstance(getattr(trl_args, "mixed_precision", None), str):
+        trl_args.mixed_precision = "no"
+
+
 def prepare_formatted_dataset(
     data_path: str | Path,
     subset_size: int = 5000,
@@ -183,6 +205,10 @@ def run_sft(
                 device_map="auto",
                 trust_remote_code=True,
             )
+            # Qwen2.5 config.json stores bfloat16. PEFT copies that onto LoRA
+            # weights unless the loaded config is pinned to float16 first.
+            if getattr(model, "config", None) is not None and hasattr(model.config, "torch_dtype"):
+                model.config.torch_dtype = torch.float16
 
             if config.quantization.enabled:
                 model = prepare_model_for_kbit_training(
@@ -226,8 +252,7 @@ def run_sft(
                 "warmup_ratio": config.warmup_ratio,
                 "max_grad_norm": config.max_grad_norm,
                 "num_train_epochs": config.epochs,
-                "fp16": True,
-                "bf16": False,
+                **t4_trainer_precision_flags(config.quantization.enabled),
                 "logging_steps": 20,
                 "save_strategy": "epoch",
                 "seed": seed,
@@ -250,6 +275,13 @@ def run_sft(
                 }
 
             trl_args = TRLSFTConfig(**filtered_kwargs)
+            apply_t4_trainer_precision(trl_args, config.quantization.enabled)
+            print(
+                "T4 precision: "
+                f"quantized={config.quantization.enabled} "
+                f"fp16={getattr(trl_args, 'fp16', None)} "
+                f"bf16={getattr(trl_args, 'bf16', None)}"
+            )
 
             # Apply any remaining training attributes directly onto the config object
             for k, v in candidate_kwargs.items():
@@ -292,6 +324,21 @@ def run_sft(
                     del filtered_trainer_kwargs["tokenizer"]
 
             trainer = SFTTrainer(**filtered_trainer_kwargs)
+            # Trainer/PEFT can cast adapters back to the checkpoint dtype (bf16).
+            for param in trainer.model.parameters():
+                if param.requires_grad and param.dtype != torch.float32:
+                    param.data = param.data.to(torch.float32)
+
+            def _bf16_grad_to_fp32(grad: torch.Tensor | None) -> torch.Tensor | None:
+                if grad is not None and grad.dtype == torch.bfloat16:
+                    return grad.float()
+                return grad
+
+            if config.quantization.enabled:
+                for param in trainer.model.parameters():
+                    if param.requires_grad:
+                        param.register_hook(_bf16_grad_to_fp32)
+
             train_res = trainer.train()
             trainer.save_model(str(out_dir))
             # Also save to base output_dir for direct PEFT checkpoint resolution
