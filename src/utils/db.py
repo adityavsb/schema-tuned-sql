@@ -43,16 +43,13 @@ PROHIBITED_FUNCTIONS = {
 }
 
 
-class SecurityViolationError(Exception):
-    """Raised when a SQL query violates read-only or isolation security guardrails."""
+def _prohibited_ast_types() -> set[type[exp.Expression]]:
+    """Expression node types blocked anywhere in the parsed SQL tree.
 
-    pass
-
-
-class ReadOnlySQLGuardrail:
-    """Validates and sanitizes SQL queries using AST inspection via sqlglot."""
-
-    PROHIBITED_EXP_TYPES: set[type[exp.Expression]] = {
+    sqlglot occasionally renames or removes AST classes across releases; keep import-time
+    compatibility by only adding members that exist (e.g. ``CurrentVersion``).
+    """
+    types: set[type[exp.Expression]] = {
         exp.Insert,
         exp.Update,
         exp.Delete,
@@ -69,8 +66,23 @@ class ReadOnlySQLGuardrail:
         exp.Merge,
         exp.TruncateTable,
         exp.Copy,
-        exp.CurrentVersion,
     }
+    current_version = getattr(exp, "CurrentVersion", None)
+    if current_version is not None:
+        types.add(current_version)
+    return types
+
+
+class SecurityViolationError(Exception):
+    """Raised when a SQL query violates read-only or isolation security guardrails."""
+
+    pass
+
+
+class ReadOnlySQLGuardrail:
+    """Validates and sanitizes SQL queries using AST inspection via sqlglot."""
+
+    PROHIBITED_EXP_TYPES: set[type[exp.Expression]] = _prohibited_ast_types()
 
     def __init__(self, allowed_tables: set[str] | None = None, dialect: str = "duckdb"):
         self.allowed_tables = {t.lower() for t in (allowed_tables or ALLOWED_TABLES)}
