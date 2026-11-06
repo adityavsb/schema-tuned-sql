@@ -32,6 +32,12 @@ def test_t4_hardware_constraints_reject_bf16_and_flash_attn():
     with pytest.raises(T4HardwareConstraintError, match="FlashAttention-2 requires Ampere"):
         validate_t4_constraints(cfg_bad_attn)
 
+    # Excessive sequence length beyond safe T4 VRAM budget -> must fail on T4
+    cfg_bad_len = cfg.model_copy(deep=True)
+    cfg_bad_len.max_seq_len = 8192
+    with pytest.raises(T4HardwareConstraintError, match="exceeds safe 16 GB T4 VRAM budget"):
+        validate_t4_constraints(cfg_bad_len)
+
 
 def test_completion_only_label_masking():
     retriever = SchemaDefinitionRetriever()
@@ -49,6 +55,22 @@ def test_completion_only_label_masking():
     input_ids = [1, 2, 3, 42, 43, 101, 102, 103]
     masked = mask_completion_only_labels(input_ids, response_template_ids=[42, 43])
     assert masked == [-100, -100, -100, -100, -100, 101, 102, 103]
+
+    try:
+        import torch
+        from src.train.collator import CompletionOnlyDataCollator
+
+        collator = CompletionOnlyDataCollator()
+        batch = collator(
+            [
+                {"input_ids": [1, 2, 3], "attention_mask": [1, 1, 1], "labels": [-100, -100, 42]},
+                {"input_ids": [1, 2], "attention_mask": [1, 1], "labels": [-100, 99]},
+            ]
+        )
+        assert batch["labels"][0].tolist() == [-100, -100, 42]
+        assert batch["labels"][1].tolist() == [-100, 99, -100]
+    except ImportError:
+        pass
 
 
 def test_sft_dry_run_and_dpo_preference_builder():

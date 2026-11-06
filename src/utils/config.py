@@ -213,9 +213,9 @@ class SFTConfig(BaseModel):
     attn_implementation: Literal["sdpa", "eager"] = "sdpa"
     quantization: QuantizationConfig = Field(default_factory=QuantizationConfig)
     lora: LoRAConfig = Field(default_factory=LoRAConfig)
-    max_seq_len: int = Field(default=1536, gt=0, le=4096)
-    per_device_train_batch_size: int = Field(default=4, gt=0)
-    gradient_accumulation_steps: int = Field(default=8, gt=0)
+    max_seq_len: int = Field(default=3072, gt=0, le=4096)
+    per_device_train_batch_size: int = Field(default=2, gt=0)
+    gradient_accumulation_steps: int = Field(default=16, gt=0)
     gradient_checkpointing: bool = True
     optimizer: Literal["paged_adamw_8bit", "adamw_torch"] = "paged_adamw_8bit"
     learning_rate: float = Field(default=2.0e-4, gt=0.0)

@@ -259,6 +259,7 @@ def run_cuda_local_inference(
 
     print(f"\n[*] [CUDA] Initializing {sys_spec.id} ({sys_spec.name})...")
     tokenizer = AutoTokenizer.from_pretrained(sys_spec.model, trust_remote_code=True)
+    tokenizer.padding_side = "left"
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -316,7 +317,7 @@ def run_cuda_local_inference(
             )
 
         inputs = tokenizer(
-            chat_texts, return_tensors="pt", padding=True, truncation=True, max_length=2048
+            chat_texts, return_tensors="pt", padding=True, truncation=True, max_length=3584
         ).to("cuda")
 
         torch.cuda.synchronize()

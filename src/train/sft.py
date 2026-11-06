@@ -29,9 +29,9 @@ def validate_t4_constraints(config: SFTConfig) -> None:
         raise T4HardwareConstraintError(
             f"FlashAttention-2 requires Ampere (sm_80+); Tesla T4 must use 'sdpa' or 'eager', got '{config.attn_implementation}'."
         )
-    if config.max_seq_len > 2048:
+    if config.max_seq_len > 3584:
         raise T4HardwareConstraintError(
-            f"Sequence length {config.max_seq_len} exceeds safe 16 GB T4 VRAM budget (max 2048)."
+            f"Sequence length {config.max_seq_len} exceeds safe 16 GB T4 VRAM budget (max 3584)."
         )
     if config.quantization.enabled and config.quantization.bnb_4bit_compute_dtype != "float16":
         raise T4HardwareConstraintError(

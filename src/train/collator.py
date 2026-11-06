@@ -84,6 +84,27 @@ class CompletionOnlyDataCollator:
     def __call__(self, examples: list[dict[str, Any]]) -> dict[str, Any]:
         import torch
 
+        # If examples already have pre-tokenized 'labels' (e.g., built by modern TRL prompt/completion handling)
+        if "labels" in examples[0]:
+            pad_id = getattr(self.tokenizer, "pad_token_id", None)
+            if pad_id is None:
+                pad_id = getattr(self.tokenizer, "eos_token_id", 0) or 0
+            max_len = max(len(ex["input_ids"]) for ex in examples)
+            batch_input_ids = []
+            batch_attention = []
+            batch_labels = []
+            for ex in examples:
+                diff = max_len - len(ex["input_ids"])
+                batch_input_ids.append(list(ex["input_ids"]) + [pad_id] * diff)
+                att = list(ex.get("attention_mask", [1] * len(ex["input_ids"]))) + [0] * diff
+                batch_attention.append(att)
+                batch_labels.append(list(ex["labels"]) + [self.ignore_index] * diff)
+            return {
+                "input_ids": torch.tensor(batch_input_ids, dtype=torch.long),
+                "attention_mask": torch.tensor(batch_attention, dtype=torch.long),
+                "labels": torch.tensor(batch_labels, dtype=torch.long),
+            }
+
         if "input_ids" in examples[0]:
             batch = self.tokenizer.pad(examples, return_tensors="pt")
         else:
@@ -92,7 +113,7 @@ class CompletionOnlyDataCollator:
                 texts,
                 padding=True,
                 truncation=True,
-                max_length=getattr(self.tokenizer, "model_max_length", 2048),
+                max_length=getattr(self.tokenizer, "model_max_length", 3072),
                 return_tensors="pt",
             )
 
@@ -105,6 +126,10 @@ class CompletionOnlyDataCollator:
                 ignore_index=self.ignore_index,
             )
             labels[i] = torch.tensor(masked, dtype=labels.dtype)
+
+        # Mask padding tokens in labels with ignore_index
+        if self.tokenizer is not None and getattr(self.tokenizer, "pad_token_id", None) is not None:
+            labels[batch["input_ids"] == self.tokenizer.pad_token_id] = self.ignore_index
 
         batch["labels"] = labels
         return batch
