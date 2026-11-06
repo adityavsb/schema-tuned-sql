@@ -117,11 +117,26 @@ def run_sft(
 
     # Live GPU execution path (Tesla T4)
     import torch
+    import inspect
     from datasets import Dataset
     from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-    from trl import DataCollatorForCompletionOnlyLM, SFTTrainer
+    from trl import SFTTrainer
     from trl import SFTConfig as TRLSFTConfig
+
+    # Robust import for completion-only data collator across TRL versions (0.12+ and 0.20+)
+    try:
+        from trl import DataCollatorForCompletionOnlyLM
+    except ImportError:
+        try:
+            from trl.trainer import DataCollatorForCompletionOnlyLM  # type: ignore[no-redef]
+        except ImportError:
+            try:
+                from trl.trainer.utils import DataCollatorForCompletionOnlyLM  # type: ignore[no-redef]
+            except ImportError:
+                from src.train.collator import (  # type: ignore[no-redef]
+                    CompletionOnlyDataCollator as DataCollatorForCompletionOnlyLM,
+                )
 
     active_seeds = [seed_override] if seed_override is not None else config.seeds
     tracker = MLflowTracker(
@@ -184,33 +199,49 @@ def run_sft(
                 )
 
             out_dir = Path(config.output_dir) / f"seed_{seed}"
-            trl_args = TRLSFTConfig(
-                output_dir=str(out_dir),
-                max_seq_length=config.max_seq_len,
-                per_device_train_batch_size=config.per_device_train_batch_size,
-                gradient_accumulation_steps=config.gradient_accumulation_steps,
-                gradient_checkpointing=config.gradient_checkpointing,
-                optim=config.optimizer,
-                learning_rate=config.learning_rate,
-                lr_scheduler_type=config.lr_scheduler,
-                warmup_ratio=config.warmup_ratio,
-                max_grad_norm=config.max_grad_norm,
-                num_train_epochs=config.epochs,
-                fp16=True,
-                bf16=False,
-                logging_steps=20,
-                save_strategy="epoch",
-                seed=seed,
-                dataset_text_field="text",
-                report_to="none",
-            )
 
-            trainer = SFTTrainer(
-                model=model,
-                train_dataset=hf_ds,
-                args=trl_args,
-                data_collator=collator,
-            )
+            # Inspect TRLSFTConfig to support both max_seq_length (TRL < 0.20) and max_length (TRL >= 0.20)
+            sig_sft = inspect.signature(TRLSFTConfig.__init__).parameters
+            trl_kwargs: dict[str, Any] = {
+                "output_dir": str(out_dir),
+                "per_device_train_batch_size": config.per_device_train_batch_size,
+                "gradient_accumulation_steps": config.gradient_accumulation_steps,
+                "gradient_checkpointing": config.gradient_checkpointing,
+                "optim": config.optimizer,
+                "learning_rate": config.learning_rate,
+                "lr_scheduler_type": config.lr_scheduler,
+                "warmup_ratio": config.warmup_ratio,
+                "max_grad_norm": config.max_grad_norm,
+                "num_train_epochs": config.epochs,
+                "fp16": True,
+                "bf16": False,
+                "logging_steps": 20,
+                "save_strategy": "epoch",
+                "seed": seed,
+                "dataset_text_field": "text",
+                "report_to": "none",
+            }
+            if "max_seq_length" in sig_sft:
+                trl_kwargs["max_seq_length"] = config.max_seq_len
+            if "max_length" in sig_sft:
+                trl_kwargs["max_length"] = config.max_seq_len
+
+            trl_args = TRLSFTConfig(**trl_kwargs)
+
+            # Support both tokenizer and processing_class across transformers/trl releases
+            trainer_kwargs: dict[str, Any] = {
+                "model": model,
+                "train_dataset": hf_ds,
+                "args": trl_args,
+                "data_collator": collator,
+            }
+            sig_trainer = inspect.signature(SFTTrainer.__init__).parameters
+            if "processing_class" in sig_trainer:
+                trainer_kwargs["processing_class"] = tokenizer
+            elif "tokenizer" in sig_trainer:
+                trainer_kwargs["tokenizer"] = tokenizer
+
+            trainer = SFTTrainer(**trainer_kwargs)
             train_res = trainer.train()
             trainer.save_model(str(out_dir))
             # Also save to base output_dir for direct PEFT checkpoint resolution

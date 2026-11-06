@@ -62,3 +62,49 @@ def mask_completion_only_labels(
     for j in range(match_end):
         labels[j] = ignore_index
     return labels
+
+
+class CompletionOnlyDataCollator:
+    """Fallback data collator for completion-only loss masking compatible across TRL/Transformers versions."""
+
+    def __init__(
+        self,
+        response_template: str = "<|im_start|>assistant\n",
+        tokenizer: Any = None,
+        ignore_index: int = -100,
+    ) -> None:
+        self.tokenizer = tokenizer
+        self.response_template = response_template
+        self.ignore_index = ignore_index
+        if tokenizer is not None and hasattr(tokenizer, "encode"):
+            self.response_template_ids = tokenizer.encode(response_template, add_special_tokens=False)
+        else:
+            self.response_template_ids = []
+
+    def __call__(self, examples: list[dict[str, Any]]) -> dict[str, Any]:
+        import torch
+
+        if "input_ids" in examples[0]:
+            batch = self.tokenizer.pad(examples, return_tensors="pt")
+        else:
+            texts = [ex["text"] for ex in examples]
+            batch = self.tokenizer(
+                texts,
+                padding=True,
+                truncation=True,
+                max_length=getattr(self.tokenizer, "model_max_length", 2048),
+                return_tensors="pt",
+            )
+
+        labels = batch["input_ids"].clone()
+        for i in range(len(labels)):
+            seq = labels[i].tolist()
+            masked = mask_completion_only_labels(
+                seq,
+                response_template_ids=self.response_template_ids,
+                ignore_index=self.ignore_index,
+            )
+            labels[i] = torch.tensor(masked, dtype=labels.dtype)
+
+        batch["labels"] = labels
+        return batch
