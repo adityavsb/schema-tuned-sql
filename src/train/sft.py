@@ -214,9 +214,8 @@ def run_sft(
 
             out_dir = Path(config.output_dir) / f"seed_{seed}"
 
-            # Inspect TRLSFTConfig to support both max_seq_length (TRL < 0.20) and max_length (TRL >= 0.20)
-            sig_sft = inspect.signature(TRLSFTConfig.__init__).parameters
-            trl_kwargs: dict[str, Any] = {
+            # Dynamically match parameters supported by TRLSFTConfig.__init__ across versions
+            candidate_kwargs: dict[str, Any] = {
                 "output_dir": str(out_dir),
                 "per_device_train_batch_size": config.per_device_train_batch_size,
                 "gradient_accumulation_steps": config.gradient_accumulation_steps,
@@ -234,28 +233,65 @@ def run_sft(
                 "seed": seed,
                 "dataset_text_field": "text",
                 "report_to": "none",
+                "max_seq_length": config.max_seq_len,
+                "max_length": config.max_seq_len,
             }
-            if "max_seq_length" in sig_sft:
-                trl_kwargs["max_seq_length"] = config.max_seq_len
-            if "max_length" in sig_sft:
-                trl_kwargs["max_length"] = config.max_seq_len
 
-            trl_args = TRLSFTConfig(**trl_kwargs)
+            sig_sft = inspect.signature(TRLSFTConfig.__init__).parameters
+            has_var_kwargs = any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig_sft.values())
+
+            if has_var_kwargs:
+                filtered_kwargs = dict(candidate_kwargs)
+                if "max_length" in sig_sft and "max_seq_length" in filtered_kwargs:
+                    del filtered_kwargs["max_seq_length"]
+            else:
+                filtered_kwargs = {
+                    k: v for k, v in candidate_kwargs.items() if k in sig_sft
+                }
+
+            trl_args = TRLSFTConfig(**filtered_kwargs)
+
+            # Apply any remaining training attributes directly onto the config object
+            for k, v in candidate_kwargs.items():
+                if k not in filtered_kwargs and hasattr(trl_args, k):
+                    try:
+                        setattr(trl_args, k, v)
+                    except Exception:
+                        pass
 
             # Support both tokenizer and processing_class across transformers/trl releases
-            trainer_kwargs: dict[str, Any] = {
+            trainer_candidate_kwargs: dict[str, Any] = {
                 "model": model,
                 "train_dataset": hf_ds,
                 "args": trl_args,
                 "data_collator": collator,
+                "tokenizer": tokenizer,
+                "processing_class": tokenizer,
             }
             sig_trainer = inspect.signature(SFTTrainer.__init__).parameters
-            if "processing_class" in sig_trainer:
-                trainer_kwargs["processing_class"] = tokenizer
-            elif "tokenizer" in sig_trainer:
-                trainer_kwargs["tokenizer"] = tokenizer
+            has_trainer_var_kwargs = any(
+                p.kind == inspect.Parameter.VAR_KEYWORD for p in sig_trainer.values()
+            )
 
-            trainer = SFTTrainer(**trainer_kwargs)
+            if has_trainer_var_kwargs:
+                filtered_trainer_kwargs = {
+                    "model": model,
+                    "train_dataset": hf_ds,
+                    "args": trl_args,
+                    "data_collator": collator,
+                }
+                if "processing_class" in sig_trainer:
+                    filtered_trainer_kwargs["processing_class"] = tokenizer
+                elif "tokenizer" in sig_trainer:
+                    filtered_trainer_kwargs["tokenizer"] = tokenizer
+            else:
+                filtered_trainer_kwargs = {
+                    k: v for k, v in trainer_candidate_kwargs.items() if k in sig_trainer
+                }
+                if "processing_class" in filtered_trainer_kwargs and "tokenizer" in filtered_trainer_kwargs:
+                    del filtered_trainer_kwargs["tokenizer"]
+
+            trainer = SFTTrainer(**filtered_trainer_kwargs)
             train_res = trainer.train()
             trainer.save_model(str(out_dir))
             # Also save to base output_dir for direct PEFT checkpoint resolution
