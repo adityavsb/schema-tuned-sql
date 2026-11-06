@@ -124,6 +124,20 @@ def run_sft(
     from trl import SFTTrainer
     from trl import SFTConfig as TRLSFTConfig
 
+    # Neutralize incompatible pre-installed torchao in Kaggle/Colab environments
+    try:
+        import peft.import_utils
+
+        peft.import_utils.is_torchao_available = lambda: False
+    except Exception:
+        pass
+    try:
+        import peft.tuners.lora.torchao
+
+        peft.tuners.lora.torchao.is_torchao_available = lambda: False
+    except Exception:
+        pass
+
     # Robust import for completion-only data collator across TRL versions (0.12+ and 0.20+)
     try:
         from trl import DataCollatorForCompletionOnlyLM
