@@ -67,6 +67,19 @@ def test_readme_numbers_and_anti_slop_provenance():
         assert meta["base_model"] in readme
         if not meta.get("is_hardware_telemetry"):
             assert meta["status"] == "pending_t4_gpu_run"
+        else:
+            assert meta["status"] == "completed_t4_gpu_run"
+            if meta.get("final_train_loss") is not None:
+                assert f'{meta["final_train_loss"]:.4f}' in readme
+
+    t4_eval_file = REPO_ROOT / "results" / "t4_cuda_eval_summary.json"
+    if t4_eval_file.is_file():
+        t4_data = json.loads(t4_eval_file.read_text(encoding="utf-8"))
+        if t4_data.get("is_model_evidence"):
+            for sid in ("S1", "S2"):
+                acc = t4_data["systems"][sid]["execution_accuracy"]
+                assert f"{acc * 100:.2f}%" in readme
+            assert "t4_cuda_eval_summary.json" in readme
 
     # 5. Honest mode disclosure and live API evaluation numbers
     or_eval_file = REPO_ROOT / "results" / "openrouter_eval_summary.json"

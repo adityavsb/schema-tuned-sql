@@ -32,6 +32,11 @@ mlartifacts/
 .DS_Store
 Thumbs.db
 
+# Local Kaggle export archives (checkpoints live in t4_results.zip only)
+t4_results.zip
+t4_results_summary.zip
+t4_results_insights.zip
+
 # Cache & training traces
 .cache/
 .artifacts/

@@ -26,7 +26,7 @@ Forward-deployed AI engineers frequently face a customer whose analytical questi
 1. **DuckDB requires two-layer sandboxing before executing LLM-generated SQL:** Standard SQLite/Postgres read-only flags are insufficient in DuckDB because `SELECT * FROM read_csv('/etc/passwd')` is syntactically a `SELECT` statement where `sqlglot` parses `read_csv(...)` as a table expression rather than a top-level command. Combining DuckDB's `enable_external_access=false` + `SET lock_configuration=true` with `sqlglot` AST inspection (`ReadOnlySQLGuardrail`) blocks table functions, file paths, multi-statement injections, and schema-qualified system probes before execution.
 2. **Completion-only loss masking is mandatory when prompts carry full DDL schemas:** Including 11 table DDLs and business metric definitions in the prompt creates a roughly 10:1 prompt-to-completion token ratio. Without `DataCollatorForCompletionOnlyLM` (`loss_on: completion_only`), >90% of cross-entropy gradient updates optimize copying static DDL text rather than SQL syntax and join conditions.
 3. **Tesla T4 (`sm_75`) requires explicit FP16 + FP32-adapter hybrid precision:** Turing GPUs lack native `bfloat16` tensor cores and Ampere `flash_attention_2` kernels. Training `Qwen2.5-Coder` in pure FP16 risks gradient underflow and `NaN` loss spikes; upcasting trainable LoRA adapter tensors (`requires_grad=True`) to `torch.float32` while keeping frozen base weights in `float16` / 4-bit `nf4` with `attn_implementation="sdpa"` and `max_grad_norm=1.0` keeps T4 training numerically stable within 16 GB VRAM.
-4. **Empirical Teacher Distillation & T4 Serving Telemetry:** `N/A` — Pending live OpenRouter API execution (`--mode live`) and physical NVIDIA Tesla T4 execution ([`notebooks/t4_runner.ipynb`](notebooks/t4_runner.ipynb)).
+4. **Empirical Teacher Distillation & T4 CUDA Evaluation:** Live OpenRouter distillation and API baselines (`T1`/`T2`) are recorded in [`results/openrouter_eval_summary.json`](results/openrouter_eval_summary.json). Tesla T4 training and CUDA evaluation (`B0`, `B2`, `S1`, `S2`) are recorded in [`results/t4_cuda_eval_summary.json`](results/t4_cuda_eval_summary.json) (`mode: cuda_live`, `is_model_evidence: true`). T4 serving economics remain pending ([`results/serving_cost_analysis.json`](results/serving_cost_analysis.json)).
 
 ---
 
@@ -45,27 +45,31 @@ flowchart TD
 
 ---
 
-## Benchmark Results (Pending OpenRouter & NVIDIA Tesla T4 Execution)
+## Benchmark Results (OpenRouter Teachers + Tesla T4 Students)
 
 > [!IMPORTANT]
 > **Provenance & Mode Disclosure (Anti-Slop Policy):**
-> Following the strict separation enforced in [`rag-eval-harness`](https://github.com/adityavsb/rag-eval-harness), offline or dry-run modes never produce numbers shown as model or hardware results (`is_model_evidence: false`, `is_hardware_telemetry: false`). All tables below that depend on live OpenRouter API calls or physical NVIDIA Tesla T4 GPUs remain **`N/A`** until executed via `--mode live` and [`notebooks/t4_runner.ipynb`](notebooks/t4_runner.ipynb).
+> Following the strict separation enforced in [`rag-eval-harness`](https://github.com/adityavsb/rag-eval-harness), offline or dry-run modes never produce numbers shown as model or hardware results (`is_model_evidence: false`, `is_hardware_telemetry: false`). OpenRouter API rows come from `--mode live`; Tesla T4 rows from `--mode cuda_live` on a physical Kaggle T4 (`notebooks/t4_runner.ipynb`). Rows marked **`N/A`** were not executed in the registered run.
 
 ### 1. System Evaluation on Frozen `test_gold.jsonl` ($n=220$) & `general_sql_holdout.jsonl` ($n=200$)
 
-Source: [`results/openrouter_eval_summary.json`](results/openrouter_eval_summary.json) (Live OpenRouter API evaluations).
+Sources: [`results/openrouter_eval_summary.json`](results/openrouter_eval_summary.json) (`T1`/`T2`, OpenRouter live) and [`results/t4_cuda_eval_summary.json`](results/t4_cuda_eval_summary.json) (`B0`/`B2`/`S1`/`S2`, Tesla T4 `cuda_live`). General-SQL holdout EX is computed only for fine-tuned students on T4.
 
 | ID | System | Execution Accuracy (EX %) | 95% Bootstrap CI ($B=2000$) | Valid SQL % | Refusal Acc % ($n=20$) | McNemar $p$ vs `B2` | General-SQL Holdout EX % ($n=200$) |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| **B0** | `Qwen2.5-Coder-3B` Zero-Shot | N/A | N/A | N/A | N/A | N/A | N/A |
+| **B0** | `Qwen2.5-Coder-3B` Zero-Shot | **41.50%** | `[35.0%, 48.5%]` | **58.64%** | **90.0%** | N/A | N/A |
 | **B1** | `Qwen2.5-Coder-3B` Few-Shot ($k=5$) | N/A | N/A | N/A | N/A | N/A | N/A |
-| **B2** | `Qwen2.5-Coder-3B` + Schema-RAG | N/A | N/A | N/A | N/A | — | N/A |
+| **B2** | `Qwen2.5-Coder-3B` + Schema-RAG | **50.00%** | `[43.5%, 57.0%]` | **76.36%** | **90.0%** | — | N/A |
 | **T1** | Teacher API (`deepseek/deepseek-chat`) | **63.00%** | `[56.0%, 69.5%]` | **86.82%** | **100.0%** | N/A | N/A |
 | **T2** | Peer API (`qwen/qwen-2.5-coder-32b-instruct`) | **60.00%** | `[53.0%, 67.0%]` | **71.82%** | **100.0%** | N/A | N/A |
-| **S1** | Fine-Tuned `Qwen2.5-Coder-1.5B` (FP16 LoRA) | N/A | N/A | N/A | N/A | N/A | N/A |
-| **S2** | Fine-Tuned `Qwen2.5-Coder-3B` (4-bit QLoRA) | N/A | N/A | N/A | N/A | N/A | N/A |
+| **S1** | Fine-Tuned `Qwen2.5-Coder-1.5B` (FP16 LoRA) | **51.50%** | `[44.5%, 58.5%]` | **78.64%** | **100.0%** | N/A | **37.50%** |
+| **S2** | Fine-Tuned `Qwen2.5-Coder-3B` (4-bit QLoRA) | **57.00%** | `[50.0%, 64.0%]` | **81.36%** | **100.0%** | **0.024** | **36.50%** |
 | **S3** | Fine-Tuned `Qwen2.5-Coder-7B` (4-bit QLoRA, Stretch) | N/A | N/A | N/A | N/A | N/A | N/A |
 | **S4** | Fine-Tuned `Qwen2.5-Coder-3B` + Schema-RAG | N/A | N/A | N/A | N/A | N/A | N/A |
+
+**Paired tests (answerable $n=200$, frozen test):** `S2` vs `B2` McNemar $p=0.024$ (`S2` wins 24 / loses 10 discordant pairs). `S2` vs `S1`: $p=0.019$ (15 vs 4). `S2` vs `T1` was not co-run on T4/API in one harness; point gap is **6.0 pp** EX (57.0% vs 63.0%).
+
+**T4 inference latency (schema test, batch 4):** `S1` p50/p95 **1647 / 3510 ms**; `S2` **2830 / 5966 ms**; `B2` **1412 / 5420 ms** (from `t4_cuda_eval_summary.json`, local GPU only; zero API cost).
 
 ---
 
@@ -97,13 +101,13 @@ Source: [`results/distillation_manifest.json`](results/distillation_manifest.jso
 
 ### 3. T4 SFT Configuration Matrix
 
-Source: [`results/t4_sft_dryrun_manifest.json`](results/t4_sft_dryrun_manifest.json) (`status: pending_t4_gpu_run`).
+Source: [`results/t4_sft_dryrun_manifest.json`](results/t4_sft_dryrun_manifest.json) (Kaggle Tesla T4, seed 42, 2 epochs, 126 steps).
 
-| Config ID | Base Checkpoint | Precision / Quantization | Attention | LoRA Rank ($r / \alpha$) | Verified Train Examples | Peak VRAM (GB) | Train Time (min) | Status |
-| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| `sft-qwen15b-lora` (`S1`) | `Qwen/Qwen2.5-Coder-1.5B-Instruct` | FP16 LoRA (FP32 master adapters) | `sdpa` | `16 / 32` | 2,000 | N/A | N/A | `pending_t4_gpu_run` |
-| `sft-qwen3b-qlora` (`S2`) | `Qwen/Qwen2.5-Coder-3B-Instruct` | 4-bit NF4 QLoRA (double quant, FP16 compute) | `sdpa` | `16 / 32` | 2,000 | N/A | N/A | `pending_t4_gpu_run` |
-| `sft-qwen7b-qlora` (`S3`) | `Qwen/Qwen2.5-Coder-7B-Instruct` | 4-bit NF4 QLoRA (max seq 1024) | `sdpa` | `16 / 32` | 2,000 | N/A | N/A | `pending_t4_gpu_run` |
+| Config ID | Base Checkpoint | Precision / Quantization | Attention | LoRA Rank ($r / \alpha$) | Verified Train Examples | Final Train Loss | Status |
+| :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| `sft-qwen15b-lora` (`S1`) | `Qwen/Qwen2.5-Coder-1.5B-Instruct` | FP16 LoRA (FP32 master adapters) | `sdpa` | `16 / 32` | 2,000 | **0.0355** | `completed_t4_gpu_run` |
+| `sft-qwen3b-qlora` (`S2`) | `Qwen/Qwen2.5-Coder-3B-Instruct` | 4-bit NF4 QLoRA (double quant, FP16 compute) | `sdpa` | `16 / 32` | 2,000 | **0.0354** | `completed_t4_gpu_run` |
+| `sft-qwen7b-qlora` (`S3`) | `Qwen/Qwen2.5-Coder-7B-Instruct` | 4-bit NF4 QLoRA (max seq 1024) | `sdpa` | `16 / 32` | 2,000 | N/A | `pending_t4_gpu_run` |
 
 ---
 
@@ -130,8 +134,13 @@ Source: [`results/serving_cost_analysis.json`](results/serving_cost_analysis.jso
 | :--- | :--- | :--- |
 | **M1: Warehouse & Frozen Splits** | 11-table DuckDB warehouse + `220` frozen test (`84a938a29aa4...`) + `100` dev (`2e5064b46fe8...`) | **Met** (100% execution verified in DuckDB) |
 | **M2: Provider & Guardrails** | OpenRouter provider, SHA-256 disk cache, hard `max_usd: 15.0` cap, BM25 Schema-RAG | **Met** (Verified in `tests/test_provider_budget.py`) |
-| **M3: Distillation Pipeline & Holdout** | Execution-verified distillation pipeline + `200` general-SQL holdout (`51a6f67d1e0a...`) | **Code Verified / Data Pending OpenRouter Run** |
-| **M4–M5: Live T4 Training, Eval & Serving** | Train `S1`/`S2` on T4 (`notebooks/t4_runner.ipynb`) and run `--mode live` evaluation | **Pending OpenRouter API Key & Tesla T4 GPU** |
+| **M3: Distillation Pipeline & Holdout** | Execution-verified distillation pipeline + `200` general-SQL holdout (`51a6f67d1e0a...`) | **Met** (`2,000` verified pairs live; holdout evaluated for `S1`/`S2` on T4) |
+| **M4: T4 Training & CUDA Eval** | Train `S1`/`S2` on T4 and evaluate `B0`/`B2`/`S1`/`S2` (`cuda_live`) | **Met** ([`results/t4_cuda_eval_summary.json`](results/t4_cuda_eval_summary.json)) |
+| **M5: T4 Serving Economics** | `src/serve/bench.py` on physical T4 | **Not met** (`status: pending_t4_gpu_run` in [`results/serving_cost_analysis.json`](results/serving_cost_analysis.json)) |
+| **T-1** (`plan.md`) | `S2` ≥ `B2` + **10.0 pp** EX | **Partial:** +**7.0 pp** (57.0% vs 50.0%), McNemar $p=0.024$ |
+| **T-2** | `S2` within **5.0 pp** of `T1` | **Not met:** **6.0 pp** below `T1` (57.0% vs 63.0%) |
+| **T-3** | T4 serving ≥ **5×** cheaper per 1k vs API | **Not measured** (serving bench not run) |
+| **T-4** | ≤ **5.0 pp** general-SQL retention | **Not met on schema→holdout gap:** `S2` **57.0%** schema vs **36.5%** cross-domain holdout (**20.5 pp**; no `B0` holdout baseline in this run) |
 
 ---
 
