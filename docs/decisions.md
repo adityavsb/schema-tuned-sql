@@ -1,6 +1,6 @@
 # Architecture Decision Records (ADRs)
 
-Key design choices, hardware trade-offs, and licensing boundaries for `schema-tuned-sql`.
+Key design choices, hardware trade-offs, and licensing boundaries for *Adapting Open Code LLM Models to Enterprise Warehouses using RAG and LLM Fine-Tuning* (`schema-tuned-sql`).
 
 ---
 

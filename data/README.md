@@ -1,5 +1,6 @@
 # Dataset Card: MetricPulse Analytics Text-to-SQL Benchmark
 
+**Project:** Adapting Open Code LLM Models to Enterprise Warehouses using RAG and LLM Fine-Tuning  
 **Repository:** `schema-tuned-sql`  
 **License:** MIT / Synthetic Data  
 **Primary Dialect:** DuckDB  

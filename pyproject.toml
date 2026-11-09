@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "schema-tuned-sql"
 version = "0.1.0"
-description = "Fine-tuning small open LLMs for analytics text-to-SQL on NVIDIA T4 GPUs with execution-verified distillation and DuckDB ground truth."
+description = "Adapting open code LLM models to enterprise warehouses using RAG and LLM fine-tuning (execution-verified distillation, Tesla T4 LoRA/QLoRA, DuckDB)."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

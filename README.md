@@ -1,4 +1,4 @@
-# Adapting Open Code Models to Enterprise Warehouses
+# Adapting Open Code LLM Models to Enterprise Warehouses using RAG and LLM Fine-Tuning
 
 **Domain-specific Text-to-SQL on NVIDIA Tesla T4 GPUs via execution-verified distillation, Turing sm_75 FP16/QLoRA recipes, and AST read-only guardrails.**
 
@@ -274,7 +274,7 @@ Or open [`notebooks/t4_runner.ipynb`](notebooks/t4_runner.ipynb) in any cloud Ju
 
 ```
 schema-tuned-sql/
-├── README.md                     # Technical report, systems lessons, and evaluation tables
+├── README.md                     # Project report (RAG vs fine-tuning benchmarks, T4 lessons)
 ├── Makefile                      # Atomic developer targets (install, lint, test, warehouse)
 ├── pyproject.toml                # Pinned package dependencies and ruff/pytest configuration
 ├── .env.example                  # Template for OPENROUTER_API_KEY (never committed with secrets)

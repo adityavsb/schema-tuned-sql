@@ -5,7 +5,7 @@ PYTEST = pytest
 RUFF = ruff
 
 help:
-	@echo "schema-tuned-sql: Fine-tuning small open LLMs for analytics text-to-SQL"
+	@echo "Adapting Open Code LLM Models to Enterprise Warehouses (RAG + fine-tuning)"
 	@echo "Available commands:"
 	@echo "  make install            Install package in editable mode"
 	@echo "  make lint               Run ruff check and format inspection"

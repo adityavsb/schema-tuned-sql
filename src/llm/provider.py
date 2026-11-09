@@ -107,7 +107,7 @@ def call_llm(
 
     extra_headers = {
         "HTTP-Referer": "https://github.com/adityavsb/schema-tuned-sql",
-        "X-Title": "schema-tuned-sql",
+        "X-Title": "Enterprise Warehouse Text-to-SQL (RAG + fine-tuning)",
     }
 
     last_error: Exception | None = None
