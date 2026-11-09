@@ -237,7 +237,7 @@ def run_cuda_local_inference(
 ) -> list[LocalInferenceResponse]:
     """Runs batch inference on a local CUDA GPU using Hugging Face transformers & PEFT."""
     import torch
-    # Neutralize incompatible pre-installed torchao in Kaggle/Colab environments
+    # Neutralize incompatible pre-installed torchao in remote cloud GPU environments
     try:
         import peft.import_utils
 

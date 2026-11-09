@@ -146,7 +146,7 @@ def run_sft(
     from trl import SFTTrainer
     from trl import SFTConfig as TRLSFTConfig
 
-    # Neutralize incompatible pre-installed torchao in Kaggle/Colab environments
+    # Neutralize incompatible pre-installed torchao in remote cloud GPU environments
     try:
         import peft.import_utils
 

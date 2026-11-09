@@ -131,7 +131,7 @@ def test_qlora_disables_fp16_grad_scaler_on_t4():
     assert t4_trainer_precision_flags(True) == {"fp16": False, "bf16": False}
 
 
-def test_git_metadata_probe_stops_at_kaggle_mount():
+def test_git_metadata_probe_stops_at_container_boundary():
     assert _inside_git_work_tree(Path("/kaggle/working")) is False
     assert _inside_git_work_tree(Path("/kaggle/working/schema-tuned-sql/src")) is False
     assert _inside_git_work_tree(REPO_ROOT) is True

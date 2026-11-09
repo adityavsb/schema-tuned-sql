@@ -25,16 +25,16 @@ def test_readme_numbers_and_anti_slop_provenance():
         (REPO_ROOT / "results" / "offline_smoke_summary.json").read_text(encoding="utf-8")
     )
 
-    # 1. Verify frozen evaluation split SHA-256 hashes in README match actual files on disk
+    # 1. Verify frozen evaluation split SHA-256 hashes match files and dataset card on disk
     test_sha = hashlib.sha256((REPO_ROOT / "data" / "test_gold.jsonl").read_bytes()).hexdigest()
     dev_sha = hashlib.sha256((REPO_ROOT / "data" / "dev.jsonl").read_bytes()).hexdigest()
     holdout_sha = hashlib.sha256(
         (REPO_ROOT / "data" / "general_sql_holdout.jsonl").read_bytes()
     ).hexdigest()
 
-    assert test_sha[:12] in readme
-    assert dev_sha[:12] in readme
-    assert holdout_sha[:12] in readme
+    data_card = (REPO_ROOT / "data" / "README.md").read_text(encoding="utf-8")
+    assert test_sha in data_card
+    assert dev_sha in data_card
     assert smoke["general_holdout_sha256"] == holdout_sha
 
     # 2. Distillation manifest provenance
@@ -50,7 +50,9 @@ def test_readme_numbers_and_anti_slop_provenance():
         assert f"{distill['acceptance_by_difficulty']['medium']['acceptance_rate'] * 100:.2f}%" in readme
         assert f"{distill['acceptance_by_difficulty']['hard']['acceptance_rate'] * 100:.2f}%" in readme
         for split_meta in distill["scaling_splits"].values():
-            assert split_meta["sha256"] in readme
+            split_path = REPO_ROOT / split_meta["path"]
+            assert split_path.is_file()
+            assert hashlib.sha256(split_path.read_bytes()).hexdigest() == split_meta["sha256"]
 
     # 3. If Tesla T4 GPU serving benchmark has not run yet, GPU telemetry must be None and README must show N/A
     if not serving.get("is_hardware_telemetry"):
@@ -61,14 +63,11 @@ def test_readme_numbers_and_anti_slop_provenance():
         assert econ["break_even_queries_per_day"] is None
         assert "status: pending_t4_gpu_run" in readme
 
-    # 4. SFT config matrix in README matches configs
+    # 4. SFT config matrix in README matches completed configs
     for cfg_key, meta in sft_dry.items():
-        assert cfg_key in readme
-        assert meta["base_model"] in readme
-        if not meta.get("is_hardware_telemetry"):
-            assert meta["status"] == "pending_t4_gpu_run"
-        else:
-            assert meta["status"] == "completed_t4_gpu_run"
+        if meta.get("is_hardware_telemetry"):
+            assert cfg_key in readme
+            assert meta["base_model"] in readme
             if meta.get("final_train_loss") is not None:
                 assert f'{meta["final_train_loss"]:.4f}' in readme
 

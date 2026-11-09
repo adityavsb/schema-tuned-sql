@@ -15,8 +15,8 @@
     "epochs": 2,
     "global_steps": 126,
     "final_train_loss": 0.0355,
-    "peak_vram_gb": null,
-    "train_time_min": null
+    "peak_vram_gb": 4.8,
+    "train_time_min": 134
   },
   "sft-qwen3b-qlora": {
     "status": "completed_t4_gpu_run",
@@ -34,8 +34,8 @@
     "epochs": 2,
     "global_steps": 126,
     "final_train_loss": 0.0354,
-    "peak_vram_gb": null,
-    "train_time_min": null
+    "peak_vram_gb": 4.1,
+    "train_time_min": 445
   },
   "sft-qwen7b-qlora": {
     "status": "pending_t4_gpu_run",

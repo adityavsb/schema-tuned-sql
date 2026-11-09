@@ -21,9 +21,8 @@ FORBIDDEN_PARAM_KEYS = {
 def _inside_git_work_tree(start: Path | None = None) -> bool:
     """True when a .git directory exists at or above `start`, without invoking git.
 
-    Calling the git binary outside a checkout on Kaggle prints
-    `fatal: not a git repository (or any parent up to mount point /kaggle)`
-    because git refuses to cross the /kaggle filesystem boundary.
+    Calling the git binary outside a checkout in containerized or cloud environments
+    can print filesystem boundary errors when git refuses to cross isolated mount points.
     """
     path = (start or Path.cwd()).resolve()
     for candidate in (path, *path.parents):

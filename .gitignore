@@ -28,6 +28,11 @@ mlartifacts/
 .env.*
 !.env.example
 
+# Internal operational tracking & planning
+STATE.md
+DECISION_LOG.md
+plan.md
+
 # OS files
 .DS_Store
 Thumbs.db
